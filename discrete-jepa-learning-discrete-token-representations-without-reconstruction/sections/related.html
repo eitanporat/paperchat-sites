@@ -1,0 +1,59 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-source" data-page="2">p. 2</div>
+
+  <p class="pc-fade-in">
+    Discrete-JEPA sits where three research lineages meet — and where, until now, none of
+    them quite reached on its own. <em>Self-supervised visual representation learning</em>
+    showed you could learn rich features without labels, but settled at the patch level.
+    <em>Discrete image tokenization</em> compressed images into a compact symbolic
+    vocabulary, but anchored that vocabulary to pixel reconstruction. The
+    <em>JEPA family</em> broke the reconstruction habit by predicting in latent space,
+    yet kept its representations continuous, so long autoregressive rollouts quietly
+    drift apart. The cards below trace each thread and the limitation it left behind.
+  </p>
+
+  <pc-tree>
+    <script type="application/json">
+    {
+      "layout": "cards",
+      "root": {
+        "label": "Three threads behind Discrete-JEPA",
+        "body": "Each thread contributed a piece, and left one gap for the next.",
+        "children": [
+          {
+            "label": "Self-supervised visual representation learning",
+            "body": "Contrastive methods — SimCLR, MoCo, SwAV — pull augmented views of the same image together and push different images apart. VICReg replaces negatives with variance-invariance-covariance regularization. Bootstrapped methods (BYOL, DINO, DINOv2) drop negatives entirely and predict a slow-moving teacher. Masked-image modelling (MAE, BEiT, iBOT) trains an encoder to fill in pixels or tokens of masked patches, and data2vec unifies the masked-latent objective across speech, vision, and language. <strong>Limitation:</strong> the features live at the patch level — strong for transfer, segmentation, and probing, but there is no global semantic token the way language models have one symbol per word."
+          },
+          {
+            "label": "Discrete image tokenization",
+            "body": "VQ-VAE introduced a learned codebook of discrete image codes; VQ-VAE-2 made it hierarchical, VQGAN added an adversarial discriminator, and DALL-E showed those codes could feed an autoregressive transformer. MaskGIT and MAGVIT refined the generative side for images and video. RQ-VAE, FSQ, SQ-VAE, and PQ-VAE explored alternative quantizers. A newer 1D wave — TiTok, FlexTok, MAETok, LARP — collapses an image into a short global token sequence rather than a 2D patch grid. <strong>Limitation:</strong> every one of these is trained against a pixel-reconstruction decoder, so each token still answers \"what does this patch look like\" rather than \"what is happening here.\""
+          },
+          {
+            "label": "Joint-Embedding Predictive Architectures (JEPA)",
+            "body": "LeCun's position paper framed JEPA as an alternative to generative pre-training: predict masked regions in <em>representation</em> space, not pixel space. I-JEPA realised it for images with a context encoder, an EMA target encoder, and a predictor over masked patches. V-JEPA extended it to video, A-JEPA to audio, MC-JEPA to motion-and-content, and D-JEPA combined JEPA with denoising. The family removes reconstruction bias and yields semantic features. <strong>Limitation:</strong> the representations stay continuous. Rolled out step by step, small prediction errors accumulate in embedding space, and a long-horizon symbolic trace drifts apart well before the rollout is supposed to end."
+          }
+        ]
+      }
+    }
+    </script>
+  </pc-tree>
+
+  <p class="pc-fade-in">
+    Read together, the threads point at a missing combination. SSL gives a
+    self-supervised signal <pc-cite key="chen2020simclr"></pc-cite><pc-cite key="he2020moco"></pc-cite><pc-cite key="caron2020swav"></pc-cite><pc-cite key="bardes2021vicreg"></pc-cite><pc-cite key="grill2020byol"></pc-cite><pc-cite key="caron2021dino"></pc-cite><pc-cite key="oquab2024dinov2"></pc-cite><pc-cite key="he2022mae"></pc-cite><pc-cite key="bao2021beit"></pc-cite><pc-cite key="zhou2022ibot"></pc-cite><pc-cite key="baevski2022data2vec"></pc-cite>
+    but no global symbol. Discrete tokenizers <pc-cite key="vandenoord2017vqvae"></pc-cite><pc-cite key="esser2021vqgan"></pc-cite><pc-cite key="yu2021vqgan"></pc-cite><pc-cite key="ramesh2021dalle"></pc-cite><pc-cite key="chang2022maskgit"></pc-cite><pc-cite key="lee2022rqvae"></pc-cite><pc-cite key="mentzer2023fsq"></pc-cite><pc-cite key="takida2022sqvae"></pc-cite><pc-cite key="vanbalen2019"></pc-cite><pc-cite key="yu2023magvit"></pc-cite><pc-cite key="yu2024titok"></pc-cite><pc-cite key="bachmann2025flextok"></pc-cite><pc-cite key="chen2025mae"></pc-cite><pc-cite key="chen2025larp"></pc-cite>
+    give the symbol but anchor it to pixels. The JEPA family <pc-cite key="lecun2022"></pc-cite><pc-cite key="assran2023ijepa"></pc-cite><pc-cite key="bardes2023vjepa"></pc-cite><pc-cite key="bardes2023mcjepa"></pc-cite><pc-cite key="fei2023ajepa"></pc-cite><pc-cite key="chen2025djepa"></pc-cite>
+    gives the semantic latent space but stays continuous and accumulates rollout error.
+    Each lineage's strength is exactly what the next one lacks.
+  </p>
+
+  <aside class="pc-callout pc-rise">
+    <div class="pc-callout-title">The synthesis</div>
+    Take a JEPA latent — already trained without a pixel decoder — and discretize its
+    <em>semantic</em> stream with vector quantization. Keep the patch tokens continuous
+    as an intermediate scaffold, and tie the two streams together with a small set of
+    predictive losses so information flows both ways. The result inherits SSL's training
+    signal, the symbol-like compactness of VQ codes, and JEPA's freedom from
+    reconstruction — without inheriting any of the three individual failure modes.
+  </aside>
+</div>

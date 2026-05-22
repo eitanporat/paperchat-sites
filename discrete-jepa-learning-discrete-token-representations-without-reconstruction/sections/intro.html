@@ -1,0 +1,23 @@
+<p class="pc-fade-in">Cognitive science draws a sharp line between two modes of thought: the fast, intuitive pattern-matching of System 1 and the slow, deliberate, rule-following of System 2 <pc-cite key="kahneman2011"></pc-cite><pc-cite key="evans2013dual"></pc-cite>. Bengio and colleagues argued that the next leap for deep learning will hinge on reproducing the latter — symbolic abstractions an agent can compose, plan over, and reason about across long horizons <pc-cite key="bengio2019sys2"></pc-cite>. In vision, that ambition translates to a concrete bottleneck: we need <em>discrete, semantic</em> tokens that a world model can roll forward without the rollout collapsing into noise <pc-cite key="goyal2021nps"></pc-cite><pc-cite key="sehgal2023neurosym"></pc-cite><pc-cite key="tang2024worldcoder"></pc-cite><pc-cite key="baek2025dreamweaver"></pc-cite>.</p>
+
+<p class="pc-fade-in">The dominant approach to discretizing images — VQ-VAE and its descendants like VQGAN — chops the picture into a grid of patches and assigns each patch a codebook entry <pc-cite key="vandenoord2017vqvae"></pc-cite><pc-cite key="esser2021vqgan"></pc-cite>. This works beautifully for autoregressive image and video generation <pc-cite key="ramesh2021dalle"></pc-cite><pc-cite key="chang2022maskgit"></pc-cite><pc-cite key="yu2023magvit"></pc-cite><pc-cite key="yan2023tecogan"></pc-cite>, but the tokens that fall out are stubbornly local: they encode texture, edges, and color statistics rather than the object-level concepts a reasoner would want to manipulate. Squinting at a sequence of patch tokens, it is hard to see anything resembling a symbol.</p>
+
+<p class="pc-fade-in">A newer wave of <em>semantic 1D</em> tokenizers — TiTok, FlexTok, and kin — collapses the spatial grid into a short sequence of holistic tokens, which is the right move in spirit <pc-cite key="yu2024titok"></pc-cite><pc-cite key="bachmann2025flextok"></pc-cite>. The catch is the training signal. These models still optimize a pixel reconstruction loss, so the codebook is pressured to remember the cat's whiskers down to the pixel. Semantic capacity gets crowded out by detail that the downstream reasoner does not need and cannot use.</p>
+
+<figure class="pc-figure pc-rise l-page">
+  <img src="figures/crops/fig1.png" alt="Discrete-JEPA overview — three tokenization regimes" />
+  <figcaption><strong>Figure 1.</strong> Three regimes. (a) Patch-level tokenizers (VQ-VAE, VQGAN) carve images into local patches — discrete tokens carry mostly low-level texture. (b) Semantic 1D tokenizers (TiTok) consolidate, but reconstruction objectives still leak fine detail into the codebook. (c) Discrete-JEPA learns semantic tokens via latent predictive coding, no pixel reconstruction in the loop.</figcaption>
+</figure>
+
+<p class="pc-fade-in">LeCun's Joint-Embedding Predictive Architecture sidesteps reconstruction entirely: predict masked regions in <em>latent</em> space, and let the encoder learn whatever abstractions make that prediction easy <pc-cite key="lecun2022"></pc-cite>. I-JEPA showed this yields strong, semantically clean representations from images alone <pc-cite key="assran2023ijepa"></pc-cite>. But I-JEPA's outputs are continuous vectors, and continuous latents are a poor fit for the autoregressive world-model setting — small per-step errors compound, and there is no discrete vocabulary to plan over. The representations are right; the format is wrong.</p>
+
+<p class="pc-fade-in">Discrete-JEPA closes that gap. We graft semantic vector quantization onto JEPA so the predictive game is played over a learned codebook, and we train it with three complementary objectives — Semantic-to-Patch, Patch-to-Semantic, and Patch-to-Patch — that together force each discrete token to capture global structure while remaining consistent with the underlying patch geometry. Crucially, there is no pixel decoder anywhere in the loop. Tokens emerge as the residue of latent prediction, not of image reconstruction.</p>
+
+<pc-callout>
+  <p>Three contributions:</p>
+  <ol>
+    <li><em>Architecture.</em> Discrete-JEPA extends I-JEPA with semantic vector quantization and three predictive losses — S2P, P2S, and P2P — yielding discrete tokens trained purely in latent space.</li>
+    <li><em>Empirics.</em> On visual symbolic prediction benchmarks, the resulting tokens beat both patch-level and reconstruction-based semantic tokenizers, especially on long-horizon rollouts.</li>
+    <li><em>Emergent structure.</em> The learned codebook exhibits visibly systematic organization, hinting at the compositional substrate System-2-style reasoning will need.</li>
+  </ol>
+</pc-callout>

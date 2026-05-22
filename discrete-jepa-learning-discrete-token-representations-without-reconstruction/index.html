@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Discrete-JEPA: Learning Discrete Token Representations without Reconstruction — paperchat</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <link rel="stylesheet" href="_lib/pc.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" defer></script>
+</head><body>
+
+<pc-header>
+  <script type="application/json">
+  {
+    "title": "Discrete-JEPA: Learning Discrete Token Representations without Reconstruction",
+    "dek": "Vector-quantizing the semantic stream of a JEPA — and tying it to the patch stream with three small predictive losses — yields discrete tokens that hold a symbolic rollout intact for a thousand steps, where continuous I-JEPA latents quietly drift apart.",
+    "authors": ["Junyeob Baek", "Hosung Lee", "Christopher Hoang", "Mengye Ren", "Sungjin Ahn"],
+    "affiliations": ["KAIST", "KAIST", "New York University", "New York University", "KAIST / NYU"],
+    "published": "June 2025",
+    "doi": "arXiv:2506.14373",
+    "doi_url": "https://arxiv.org/abs/2506.14373"
+  }
+  </script>
+</pc-header>
+
+<section class="pc-page" id="intro">
+  <div class="pc-eyebrow">§1 · introduction</div>
+  <h2>Why discrete tokens, why JEPA</h2>
+  <div data-section-loader="intro">Loading…</div>
+</section>
+
+<section class="pc-page" id="related">
+  <div class="pc-eyebrow">§2 · related work</div>
+  <h2>What came before</h2>
+  <div data-section-loader="related">Loading…</div>
+</section>
+
+<section class="pc-page" id="prelim">
+  <div class="pc-eyebrow">§3 · preliminaries</div>
+  <h2>JEPA in one breath</h2>
+  <div data-section-loader="prelim">Loading…</div>
+</section>
+
+<section class="pc-page" id="method">
+  <div class="pc-eyebrow">§4 · the model</div>
+  <h2>Discrete-JEPA: the architecture and its three losses</h2>
+  <div data-section-loader="method">Loading…</div>
+</section>
+
+<section class="pc-page" id="experiments">
+  <div class="pc-eyebrow">§5 · experiments</div>
+  <h2>Long-horizon symbolic rollouts</h2>
+  <div data-section-loader="experiments">Loading…</div>
+</section>
+
+<section class="pc-page" id="discussion">
+  <div class="pc-eyebrow">§6 · §7 · limitations &amp; conclusion</div>
+  <h2>Limitations and where it points</h2>
+  <div data-section-loader="discussion">Loading…</div>
+</section>
+
+<div class="pc-appendix">
+<pc-bibliography>
+<script type="application/json">
+[
+  {"key":"lecun2022", "authors":"LeCun, Y.", "year":2022, "title":"A path towards autonomous machine intelligence", "venue":"Open Review 62(1)", "url":"https://openreview.net/pdf?id=BZ5a1r-kVsf"},
+  {"key":"assran2023ijepa", "authors":"Assran, M., Duval, Q., Misra, I., Bojanowski, P., Vincent, P., Rabbat, M., LeCun, Y., Ballas, N.", "year":2023, "title":"Self-supervised learning from images with a joint-embedding predictive architecture", "venue":"CVPR 2023", "url":"https://arxiv.org/abs/2301.08243"},
+  {"key":"bardes2023vjepa", "authors":"Bardes, A., Garrido, Q., Ponce, J., Chen, X., Rabbat, M., LeCun, Y., Assran, M., Ballas, N.", "year":2023, "title":"V-JEPA: Latent video prediction for visual representation learning", "venue":"2023", "url":"https://ai.meta.com/research/publications/v-jepa-latent-video-prediction-for-visual-representation-learning/"},
+  {"key":"bardes2023mcjepa", "authors":"Bardes, A., Ponce, J., LeCun, Y.", "year":2023, "title":"MC-JEPA: A joint-embedding predictive architecture for self-supervised learning of motion and content features", "venue":"arXiv:2307.12698", "url":"https://arxiv.org/abs/2307.12698"},
+  {"key":"sobal2022", "authors":"Sobal, V., SV, J., Jalagam, S., Carion, N., Cho, K., LeCun, Y.", "year":2022, "title":"Joint embedding predictive architectures focus on slow features", "venue":"arXiv:2211.10831", "url":"https://arxiv.org/abs/2211.10831"},
+  {"key":"vandenoord2017vqvae", "authors":"Van Den Oord, A., Vinyals, O., et al.", "year":2017, "title":"Neural discrete representation learning", "venue":"NeurIPS 2017", "url":"https://arxiv.org/abs/1711.00937"},
+  {"key":"esser2021vqgan", "authors":"Esser, P., Rombach, R., Ommer, B.", "year":2021, "title":"Taming transformers for high-resolution image synthesis", "venue":"CVPR 2021", "url":"https://arxiv.org/abs/2012.09841"},
+  {"key":"ramesh2021dalle", "authors":"Ramesh, A., Pavlov, M., Goh, G., Gray, S., Voss, C., Radford, A., Chen, M., Sutskever, I.", "year":2021, "title":"Zero-shot text-to-image generation", "venue":"ICML 2021", "url":"https://arxiv.org/abs/2102.12092"},
+  {"key":"razavi2019vqvae2", "authors":"Razavi, A., Van den Oord, A., Vinyals, O.", "year":2019, "title":"Generating diverse high-fidelity images with VQ-VAE-2", "venue":"NeurIPS 2019", "url":"https://arxiv.org/abs/1906.00446"},
+  {"key":"yu2021vqgan", "authors":"Yu, J., Li, X., Koh, J. Y. et al.", "year":2021, "title":"Vector-quantized image modeling with improved VQGAN", "venue":"arXiv:2110.04627", "url":"https://arxiv.org/abs/2110.04627"},
+  {"key":"chang2022maskgit", "authors":"Chang, H., Zhang, H., Jiang, L., Liu, C., Freeman, W. T.", "year":2022, "title":"MaskGIT: Masked generative image transformer", "venue":"CVPR 2022", "url":"https://arxiv.org/abs/2202.04200"},
+  {"key":"yu2023magvit", "authors":"Yu, L., Cheng, Y., Sohn, K., Lezama, J., Zhang, H., Chang, H. et al.", "year":2023, "title":"MAGVIT: Masked generative video transformer", "venue":"CVPR 2023", "url":"https://arxiv.org/abs/2212.05199"},
+  {"key":"yan2023tecogan", "authors":"Yan, W., Hafner, D., James, S., Abbeel, P.", "year":2023, "title":"Temporally consistent transformers for video generation", "venue":"ICML 2023", "url":"https://arxiv.org/abs/2210.02396"},
+  {"key":"yu2024titok", "authors":"Yu, Q., Weber, M., Deng, X., Shen, X., Cremers, D., Chen, L.-C.", "year":2024, "title":"An image is worth 32 tokens for reconstruction and generation", "venue":"NeurIPS 2024", "url":"https://arxiv.org/abs/2406.07550"},
+  {"key":"wu2024setok", "authors":"Wu, S., Fei, H., Li, X., Ji, J., Zhang, H., Chua, T.-S., Yan, S.", "year":2024, "title":"Towards semantic equivalence of tokenization in multimodal LLMs", "venue":"arXiv:2406.05127", "url":"https://arxiv.org/abs/2406.05127"},
+  {"key":"kim2025", "authors":"Kim, D., He, J., Yu, Q., Yang, C., Shen, X., Kwak, S., Chen, L.-C.", "year":2025, "title":"Democratizing text-to-image masked generative models with compact text-aware one-dimensional tokens", "venue":"arXiv:2501.07730", "url":"https://arxiv.org/abs/2501.07730"},
+  {"key":"bachmann2025flextok", "authors":"Bachmann, R., Allardice, J., Mizrahi, D., Fini, E. et al.", "year":2025, "title":"FlexTok: Resampling images into 1D token sequences of flexible length", "venue":"arXiv:2502.13967", "url":"https://arxiv.org/abs/2502.13967"},
+  {"key":"chen2025larp", "authors":"Wang, H., Suri, S., Ren, Y., Chen, H., Shrivastava, A.", "year":2025, "title":"LARP: Tokenizing videos with a learned autoregressive generative prior", "venue":"ICLR 2025", "url":"https://openreview.net/forum?id=Wr3UuEx72f"},
+  {"key":"chen2025mae", "authors":"Chen, H., Han, Y., Chen, F. et al.", "year":2025, "title":"Masked autoencoders are effective tokenizers for diffusion models", "venue":"ICLR 2025", "url":"https://arxiv.org/abs/2502.03444"},
+  {"key":"chen2025djepa", "authors":"Chen, D., Hu, J., Wei, X., Wu, E.", "year":2025, "title":"Denoising with a joint-embedding predictive architecture", "venue":"ICLR 2025", "url":"https://openreview.net/forum?id=d4njmzM7jf"},
+  {"key":"lee2022rqvae", "authors":"Lee, D., Kim, C., Kim, S., Cho, M., Han, W.-S.", "year":2022, "title":"Autoregressive image generation using residual quantization", "venue":"CVPR 2022", "url":"https://arxiv.org/abs/2203.01941"},
+  {"key":"mentzer2023fsq", "authors":"Mentzer, F., Minnen, D., Agustsson, E., Tschannen, M.", "year":2023, "title":"Finite scalar quantization: VQ-VAE made simple", "venue":"arXiv:2309.15505", "url":"https://arxiv.org/abs/2309.15505"},
+  {"key":"takida2022sqvae", "authors":"Takida, Y., Shibuya, T., Liao, W. et al.", "year":2022, "title":"SQ-VAE: Variational Bayes on discrete representation with self-annealed stochastic quantization", "venue":"arXiv:2205.07547", "url":"https://arxiv.org/abs/2205.07547"},
+  {"key":"vanbalen2019", "authors":"Van Balen, J., Levy, M.", "year":2019, "title":"PQ-VAE: Efficient recommendation using quantized embeddings", "venue":"RecSys LBR", "url":"https://ceur-ws.org/Vol-2431/paper10.pdf"},
+  {"key":"chen2020simclr", "authors":"Chen, T., Kornblith, S., Norouzi, M., Hinton, G.", "year":2020, "title":"A simple framework for contrastive learning of visual representations", "venue":"ICML 2020", "url":"https://arxiv.org/abs/2002.05709"},
+  {"key":"he2020moco", "authors":"He, K., Fan, H., Wu, Y., Xie, S., Girshick, R.", "year":2020, "title":"Momentum contrast for unsupervised visual representation learning", "venue":"CVPR 2020", "url":"https://arxiv.org/abs/1911.05722"},
+  {"key":"caron2020swav", "authors":"Caron, M., Misra, I., Mairal, J. et al.", "year":2020, "title":"Unsupervised learning of visual features by contrasting cluster assignments", "venue":"NeurIPS 2020", "url":"https://arxiv.org/abs/2006.09882"},
+  {"key":"bardes2021vicreg", "authors":"Bardes, A., Ponce, J., LeCun, Y.", "year":2021, "title":"VICReg: Variance-invariance-covariance regularization for self-supervised learning", "venue":"arXiv:2105.04906", "url":"https://arxiv.org/abs/2105.04906"},
+  {"key":"grill2020byol", "authors":"Grill, J.-B., Strub, F., Altché, F. et al.", "year":2020, "title":"Bootstrap your own latent: A new approach to self-supervised learning", "venue":"NeurIPS 2020", "url":"https://arxiv.org/abs/2006.07733"},
+  {"key":"caron2021dino", "authors":"Caron, M., Touvron, H., Misra, I., Jégou, H., Mairal, J., Bojanowski, P., Joulin, A.", "year":2021, "title":"Emerging properties in self-supervised vision transformers", "venue":"ICCV 2021", "url":"https://arxiv.org/abs/2104.14294"},
+  {"key":"oquab2024dinov2", "authors":"Oquab, M. et al.", "year":2024, "title":"DINOv2: Learning robust visual features without supervision", "venue":"TMLR 2024", "url":"https://arxiv.org/abs/2304.07193"},
+  {"key":"he2022mae", "authors":"He, K., Chen, X., Xie, S., Li, Y., Dollár, P., Girshick, R.", "year":2022, "title":"Masked autoencoders are scalable vision learners", "venue":"CVPR 2022", "url":"https://arxiv.org/abs/2111.06377"},
+  {"key":"bao2021beit", "authors":"Bao, H., Dong, L., Piao, S., Wei, F.", "year":2021, "title":"BEiT: BERT pre-training of image transformers", "venue":"arXiv:2106.08254", "url":"https://arxiv.org/abs/2106.08254"},
+  {"key":"zhou2022ibot", "authors":"Zhou, J., Wei, C., Wang, H. et al.", "year":2022, "title":"iBOT: Image BERT pre-training with online tokenizer", "venue":"ICLR 2022", "url":"https://arxiv.org/abs/2111.07832"},
+  {"key":"baevski2022data2vec", "authors":"Baevski, A., Hsu, W.-N., Xu, Q., Babu, A., Gu, J., Auli, M.", "year":2022, "title":"data2vec: A general framework for self-supervised learning in speech, vision and language", "venue":"ICML 2022", "url":"https://arxiv.org/abs/2202.03555"},
+  {"key":"fei2023ajepa", "authors":"Fei, Z., Fan, M., Huang, J.", "year":2023, "title":"A-JEPA: Joint-embedding predictive architecture can listen", "venue":"arXiv:2311.15830", "url":"https://arxiv.org/abs/2311.15830"},
+  {"key":"dosovitskiy2020vit", "authors":"Dosovitskiy, A. et al.", "year":2020, "title":"An image is worth 16x16 words: Transformers for image recognition at scale", "venue":"arXiv:2010.11929", "url":"https://arxiv.org/abs/2010.11929"},
+  {"key":"kahneman2011", "authors":"Kahneman, D.", "year":2011, "title":"Thinking, fast and slow", "venue":"Farrar, Straus and Giroux", "url":"https://us.macmillan.com/books/9780374533557/thinkingfastandslow"},
+  {"key":"evans2013dual", "authors":"Evans, J. S. B., Stanovich, K. E.", "year":2013, "title":"Dual-process theories of higher cognition: Advancing the debate", "venue":"Perspectives on Psychological Science 8(3)", "url":"https://journals.sagepub.com/doi/10.1177/1745691612460685"},
+  {"key":"bengio2019sys2", "authors":"Bengio, Y. et al.", "year":2019, "title":"From system 1 deep learning to system 2 deep learning", "venue":"NeurIPS 2019 keynote", "url":"https://nips.cc/Conferences/2019/Schedule?showEvent=15488"},
+  {"key":"goyal2021nps", "authors":"Goyal, A., Didolkar, A., Ke, N. R. et al.", "year":2021, "title":"Neural production systems", "venue":"NeurIPS 2021", "url":"https://arxiv.org/abs/2103.01937"},
+  {"key":"sehgal2023neurosym", "authors":"Sehgal, A., Grayeli, A., Sun, J. J., Chaudhuri, S.", "year":2023, "title":"Neurosymbolic grounding for compositional world models", "venue":"arXiv:2310.12690", "url":"https://arxiv.org/abs/2310.12690"},
+  {"key":"tang2024worldcoder", "authors":"Tang, H., Key, D., Ellis, K.", "year":2024, "title":"WorldCoder: A model-based LLM agent that builds world models by writing code", "venue":"NeurIPS 2024", "url":"https://arxiv.org/abs/2402.12275"},
+  {"key":"baek2025dreamweaver", "authors":"Baek, J., Wu, Y.-F., Singh, G., Ahn, S.", "year":2025, "title":"Dreamweaver: Learning compositional world models from pixels", "venue":"ICLR 2025", "url":"https://openreview.net/forum?id=e5mTvjXG9u"},
+  {"key":"jiang2024slot", "authors":"Jiang, J., Deng, F., Singh, G., Lee, M., Ahn, S.", "year":2024, "title":"Slot state space models", "venue":"NeurIPS 2024", "url":"https://openreview.net/forum?id=BJv1t4XNJW"},
+  {"key":"watters2019spriteworld", "authors":"Watters, N., Matthey, L., Borgeaud, S., Kabra, R., Lerchner, A.", "year":2019, "title":"Spriteworld: A flexible, configurable reinforcement learning environment", "venue":"DeepMind", "url":"https://github.com/deepmind/spriteworld/"}
+]
+</script>
+</pc-bibliography>
+</div>
+
+<script type="module" src="_lib/pc.js"></script>
+<script>
+(async () => {
+  function execScripts(root) {
+    for (const old of root.querySelectorAll('script')) {
+      const s = document.createElement('script');
+      for (const a of old.attributes) s.setAttribute(a.name, a.value);
+      s.text = old.textContent;
+      old.replaceWith(s);
+    }
+  }
+  for (const el of document.querySelectorAll('[data-section-loader]')) {
+    const id = el.dataset.sectionLoader;
+    try {
+      const r = await fetch('sections/' + id + '.html');
+      if (!r.ok) continue;
+      const tpl = document.createElement('template');
+      tpl.innerHTML = await r.text();
+      execScripts(tpl.content);
+      el.replaceWith(tpl.content);
+    } catch {}
+  }
+  if (window.pcSite) { pcSite.primeReveals(document); pcSite.observeReveals(document); pcSite.hideOrphanReferences(document); pcSite.numberFigures(document); }
+  if (window.pcMath) pcMath.renderMathIn(document.body);
+})();
+</script>
+</body></html>

@@ -1,0 +1,198 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-eyebrow pc-fade-in">§4 · Discrete JEPA Tokenization</div>
+  <div class="pc-source" data-page="3">pp. 3–5</div>
+
+  <p class="pc-fade-in">
+    The architecture inherits three components from I-JEPA <pc-cite key="assran2023ijepa"></pc-cite>
+    <pc-cite key="lecun2022"></pc-cite>: a <em>context encoder</em> <code>f<sub>θc</sub></code>,
+    a <em>target encoder</em> <code>f<sub>θ̄t</sub></code> updated by
+    <pc-term def="Exponential Moving Average: the target encoder's weights are a momentum-weighted running average of the context encoder's weights, providing stable prediction targets without gradient flow (He et al. 2020; Caron et al. 2021).">EMA</pc-term>
+    <pc-cite key="he2020moco"></pc-cite><pc-cite key="caron2021dino"></pc-cite>,
+    and predictors <code>g<sub>φ</sub></code>.
+    Discrete-JEPA extends this by introducing <strong>two distinct token streams</strong> inside each encoder:
+    a small set of <em>semantic tokens</em> <code>z<sub>s</sub></code> derived from
+    <pc-term def="L learnable query vectors prepended to the patch sequence; they attend over all visible patches and distill global scene context into a compact summary.">learnable query tokens</pc-term>
+    <code>z<sub>s</sub><sup>0</sup></code>,
+    and dense <em>patch tokens</em> <code>z<sub>p</sub></code> representing fine-grained spatial detail.
+    Vector quantization acts <strong>only on the semantic stream</strong>;
+    patch tokens stay continuous throughout and are discarded after training.
+  </p>
+
+  <figure class="l-page pc-figure pc-figure--zoom pc-rise">
+    <img src="figures/crops/fig2.png" alt="Discrete-JEPA architecture diagram showing masked context input, context encoder, VQ on semantic stream, three predictors S2P / P2S / P2P, and EMA target encoder producing l2-loss targets." style="width:100%; border-radius:4px;">
+    <figcaption>
+      <strong>Discrete-JEPA architecture.</strong>
+      The context encoder <code>f<sub>θc</sub></code> takes masked patches together with learnable query tokens
+      <code>z<sub>s</sub><sup>0</sup></code> and produces semantic tokens <code>z<sub>s</sub></code>
+      (discretized by VQ into <code>z<sub>s</sub><sup>discrete</sup></code>) and continuous patch tokens <code>z<sub>p</sub></code>.
+      The EMA target encoder <code>f<sub>θ̄t</sub></code> processes the full image to supply reference targets
+      <code>z̄<sub>s</sub></code>, <code>z̄<sub>p</sub></code>.
+      Three predictors — S2P, P2S, P2P — bridge the discrete-semantic and continuous-patch representations,
+      and are optimized via l2 loss against the target encoder's outputs.
+      The target encoder is never backpropagated through; its weights track the context encoder by EMA only.
+    </figcaption>
+  </figure>
+
+  <p class="pc-fade-in">
+    <strong>§4.1 Architecture.</strong>
+    The context encoder receives visible patches <code>x<sub>V</sub></code> (randomly masked 40–60%)
+    together with the <code>L</code> learnable tokens <code>z<sub>s</sub><sup>0</sup></code>,
+    and outputs the pair <code>(z<sub>s</sub>, z<sub>p</sub>)</code>.
+    The target encoder, identically structured but EMA-updated, processes the <em>full</em> image
+    to produce <code>(z̄<sub>s</sub>, z̄<sub>p</sub>)</code> — the ground-truth targets predictors are trained to match.
+    Because the target encoder never receives gradients directly, its representations evolve smoothly,
+    providing stable prediction targets in the manner of MoCo <pc-cite key="he2020moco"></pc-cite>
+    and DINO <pc-cite key="caron2021dino"></pc-cite>.
+    The encoder backbone follows
+    <pc-term def="Vision Transformer (ViT): divides an image into fixed-size non-overlapping patches, linearly projects each into a token embedding, and processes all tokens with multi-head self-attention (Dosovitskiy et al. 2020).">ViT-Base</pc-term>
+    <pc-cite key="dosovitskiy2020vit"></pc-cite> with patch size 8.
+  </p>
+
+  <p class="pc-fade-in">
+    <strong>§4.2 Semantic tokenization via VQ.</strong>
+    The continuous semantic representation <code>z̄<sub>s</sub> ∈ ℝ<sup>D<sub>s</sub></sup></code>
+    is mapped to a discrete code from a learnable
+    <pc-term def="A matrix C_s ∈ R^{K_s × D_s} of prototype vectors; the nearest prototype to a query is selected by Euclidean distance, yielding an index and its corresponding embedding.">codebook</pc-term>
+    <code>C<sub>s</sub> ∈ ℝ<sup>K<sub>s</sub> × D<sub>s</sub></sup></code>
+    (K<sub>s</sub> = 1024, D<sub>s</sub> = 96)
+    by a nearest-neighbour lookup:
+  </p>
+
+  <pc-equation>
+    <script type="application/json">
+    {
+      "tex": "k^* = \\arg\\min_{k \\in \\{1,\\ldots,K_s\\}} \\|\\bar{z}_s - c_k\\|_2, \\qquad \\bar{z}_s^{\\mathrm{discrete}} = c_{k^*}",
+      "terms": {
+        "\\bar{z}_s": "Continuous semantic representation from the target encoder.",
+        "c_k": "The k-th prototype vector in the shared semantic codebook C_s.",
+        "k^*": "Index of the nearest codebook entry by Euclidean distance.",
+        "\\bar{z}_s^{\\mathrm{discrete}}": "Discrete semantic token: the selected codebook vector."
+      }
+    }
+    </script>
+  </pc-equation>
+
+  <p class="pc-fade-in">
+    The same shared codebook and lookup are applied to semantic representations from <em>both</em> encoders
+    (equations 4 in the paper), so the discrete tokens entering the predictors and the targets they are matched
+    against live in the same discrete space.
+    Each image is summarized into <strong>8 discrete tokens</strong> for Dancing-Sprites-Pattern
+    and <strong>32 discrete tokens</strong> for Blinking-Ball,
+    compared to 64 continuous patch tokens per image in I-JEPA.
+    Patch tokens <code>z̄<sub>p</sub></code> remain continuous and serve only as an intermediate
+    training signal — they are not retained in the final tokenized output.
+  </p>
+
+  <p class="pc-fade-in">
+    <strong>§4.3 Three complementary predictive objectives.</strong>
+    A single predictor objective would leave information between the two streams uncoordinated.
+    Discrete-JEPA instead defines three objectives whose interplay forces the discrete tokens to
+    carry rich global context while remaining grounded in spatial detail.
+  </p>
+
+  <pc-grid>
+    <script type="application/json">
+    [
+      {
+        "eyebrow": "S2P",
+        "title": "Semantic → Patch",
+        "body": "Discrete semantic tokens must predict continuous patch tokens at masked spatial locations. This forces the compact discrete code to retain enough global context to reconstruct local spatial detail."
+      },
+      {
+        "eyebrow": "P2S",
+        "title": "Patch → Semantic",
+        "body": "Continuous patch tokens must reconstruct the full semantic representation. This ensures the two streams stay consistent — local features cannot diverge from the global semantic summary."
+      },
+      {
+        "eyebrow": "P2P",
+        "title": "Patch → Patch",
+        "body": "Continuous patch tokens predict other continuous patch tokens at masked positions, preserving the original I-JEPA spatial-prediction objective and its proven sample efficiency."
+      }
+    ]
+    </script>
+  </pc-grid>
+
+  <p class="pc-fade-in">
+    The S2P loss operates over target spatial positions <code>i ∈ M</code>,
+    where <code>M</code> is the set of masked patch indices:
+  </p>
+
+  <pc-equation>
+    <script type="application/json">
+    {
+      "tex": "\\mathcal{L}_{\\text{S2P}} = \\sum_{i \\in M} \\left\\| \\bar{z}_p(i) - g_\\varphi^{\\text{S2P}}\\!\\left(z_s^{\\text{discrete}},\\, i\\right) \\right\\|_2^2",
+      "terms": {
+        "\\bar{z}_p(i)": "Target continuous patch token at spatial position i (from target encoder).",
+        "g_\\varphi^{\\text{S2P}}": "S2P predictor: takes discrete semantic tokens and a position index, outputs a predicted patch vector.",
+        "z_s^{\\text{discrete}}": "Discrete semantic tokens from the context encoder."
+      }
+    }
+    </script>
+  </pc-equation>
+
+  <p class="pc-fade-in">
+    P2S operates over the full semantic representation (no positional mask needed, since semantic tokens
+    already aggregate globally):
+  </p>
+
+  <pc-equation>
+    <script type="application/json">
+    {
+      "tex": "\\mathcal{L}_{\\text{P2S}} = \\left\\| \\bar{z}_s - g_\\varphi^{\\text{P2S}}\\!\\left(z_p\\right) \\right\\|_2^2",
+      "terms": {
+        "\\bar{z}_s": "Target semantic representation from the target encoder.",
+        "g_\\varphi^{\\text{P2S}}": "P2S predictor: aggregates continuous patch tokens into a predicted semantic vector.",
+        "z_p": "Continuous patch tokens from the context encoder."
+      }
+    }
+    </script>
+  </pc-equation>
+
+  <p class="pc-fade-in">
+    P2P mirrors the original I-JEPA objective <pc-cite key="assran2023ijepa"></pc-cite>,
+    keeping the model anchored to proven spatial-prediction performance:
+  </p>
+
+  <pc-equation>
+    <script type="application/json">
+    {
+      "tex": "\\mathcal{L}_{\\text{P2P}} = \\sum_{i \\in M} \\left\\| \\bar{z}_p(i) - g_\\varphi^{\\text{P2P}}\\!\\left(z_p,\\, i\\right) \\right\\|_2^2",
+      "terms": {
+        "\\bar{z}_p(i)": "Target continuous patch token at masked position i.",
+        "g_\\varphi^{\\text{P2P}}": "P2P predictor: takes visible patch tokens and a position index to predict the hidden patch.",
+        "z_p": "Continuous patch tokens from the context encoder."
+      }
+    }
+    </script>
+  </pc-equation>
+
+  <p class="pc-fade-in">
+    The unified training objective combines all three predictive losses with the standard VQ commitment loss
+    <pc-cite key="vandenoord2017vqvae"></pc-cite><pc-cite key="esser2021vqgan"></pc-cite>:
+  </p>
+
+  <pc-equation>
+    <script type="application/json">
+    {
+      "tex": "\\mathcal{L}_{\\text{total}} = \\lambda_1 \\,\\mathcal{L}_{\\text{S2P}} + \\lambda_2 \\,\\mathcal{L}_{\\text{P2S}} + \\lambda_3 \\,\\mathcal{L}_{\\text{P2P}} + \\mathcal{L}_{\\text{VQ}}",
+      "wide": true,
+      "terms": {
+        "\\lambda_1, \\lambda_2, \\lambda_3": "Scalar weights balancing the three predictive objectives.",
+        "\\mathcal{L}_{\\text{VQ}}": "Standard VQ commitment loss: discourages the encoder output from drifting away from its nearest codebook entry.",
+        "\\mathcal{L}_{\\text{S2P}}": "Semantic-to-Patch prediction loss.",
+        "\\mathcal{L}_{\\text{P2S}}": "Patch-to-Semantic prediction loss.",
+        "\\mathcal{L}_{\\text{P2P}}": "Patch-to-Patch prediction loss (mirrors I-JEPA objective)."
+      }
+    }
+    </script>
+  </pc-equation>
+
+  <aside class="pc-callout pc-fade-in">
+    <div class="pc-callout-title">Design Principle</div>
+    <strong>VQ acts on the semantic stream only.</strong>
+    Patch tokens stay continuous — they carry fine-grained spatial gradients that would be lossy to quantize,
+    and they are discarded after training. Only the compact discrete semantic tokens survive into inference,
+    giving downstream world models a bounded, enumerable state space that eliminates the error accumulation
+    inherent to continuous autoregressive prediction.
+  </aside>
+</div>

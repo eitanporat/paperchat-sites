@@ -1,0 +1,79 @@
+<div class="pc-prose pc-stagger">
+
+  <div class="pc-eyebrow pc-fade-in">§6–7 · Limitations, Conclusion &amp; Impact</div>
+  <div class="pc-source" data-page="6">pp. 6–8</div>
+
+  <p class="pc-fade-in">Three concrete boundaries define where Discrete-JEPA stands today. Each one also points to the next unsolved problem.</p>
+
+  <pc-grid>
+    <script type="application/json">
+    [
+      {
+        "eyebrow": "Limitation 1",
+        "title": "Abstraction–Precision Trade-off",
+        "body": "Discrete semantic tokens capture global patterns but discard fine-grained spatial detail. On the Dancing-Sprites position task, I-JEPA-Concat's explicit patch-level encoding gives it an early lead. The fix is hierarchical multi-granularity tokens — one level for symbolic context, another for spatial detail."
+      },
+      {
+        "eyebrow": "Limitation 2",
+        "title": "Narrow Evaluation Scope",
+        "body": "All experiments use controlled synthetic benchmarks: Dancing-Sprites-Pattern and Blinking-Ball. No real images, no video datasets, no natural-scene benchmarks. The controlled layouts make symbolic reasoning measurable, but real-world complexity remains untested."
+      },
+      {
+        "eyebrow": "Limitation 3",
+        "title": "Thin Baseline Coverage",
+        "body": "Comparisons are limited to I-JEPA variants (Concat and AvgPool). VQGAN, TiTok, and other contemporary discrete tokenizers are not compared head-to-head, leaving the relative gains over the full tokenization landscape unknown."
+      }
+    ]
+    </script>
+  </pc-grid>
+
+  <p class="pc-fade-in">The compelling result of this work is not a number — it is a behaviour. <strong>Discrete-JEPA maintains coherent pattern integrity for 1,000 rollout steps while I-JEPA's continuous representations break down around step 600</strong>, despite I-JEPA's initially comparable accuracy. That divergence is the real signal: continuous world models can mimic local transitions but cannot sustain global symbolic rules. The discrete index space eliminates error accumulation by constraining each prediction to a finite codebook, replacing gradient drift with lookup.</p>
+
+  <figure class="pc-figure pc-rise">
+    <div style="display:flex; flex-direction:column; gap:4px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:var(--ink-soft); width:52px; flex-shrink:0;">Ground<br>Truth</span>
+        <img src="figures/img-006-024.jpg" alt="Ground-truth Blinking-Ball sequence" style="flex:1; display:block; border-radius:4px;">
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:var(--ink-soft); width:52px; flex-shrink:0;">I-JEPA</span>
+        <img src="figures/img-006-026.jpg" alt="I-JEPA predictions on Blinking-Ball — pattern breaks after step 400" style="flex:1; display:block; border-radius:4px;">
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:var(--ink-soft); width:52px; flex-shrink:0;">D-JEPA<br>(Ours)</span>
+        <img src="figures/img-006-028.jpg" alt="Discrete-JEPA predictions on Blinking-Ball — pattern maintained to 1,000 steps" style="flex:1; display:block; border-radius:4px;">
+      </div>
+    </div>
+    <figcaption>Blinking-Ball rollouts at t = 10, 20, 50, 100, 200, 400, 600, 800, 1,000. I-JEPA loses positional colour consistency around step 400–600; Discrete-JEPA sustains the correct rotation pattern through all 1,000 steps. (Figure 5 of the paper.)</figcaption>
+  </figure>
+
+  <p class="pc-fade-in">This sustained pattern maintenance is what the authors interpret as a route toward <em>System-2 reasoning</em> <pc-cite key="kahneman2011"></pc-cite> <pc-cite key="bengio2019sys2"></pc-cite> — deliberate, rule-governed prediction rather than reactive sensory-motor extrapolation. Building world models that plan symbolically over visual observations has been a long-standing target <pc-cite key="goyal2021nps"></pc-cite> <pc-cite key="sehgal2023neurosym"></pc-cite> <pc-cite key="tang2024worldcoder"></pc-cite> <pc-cite key="baek2025dreamweaver"></pc-cite> <pc-cite key="jiang2024slot"></pc-cite>; Discrete-JEPA's discrete semantic token space is proposed as a minimal substrate capable of hosting such computation. The gap between this synthetic proof-of-concept and real-world tasks — robotics manipulation, multi-modal video understanding — is acknowledged as the central open question.</p>
+
+  <pc-toggle>
+    <script type="application/json">
+    {
+      "a": {
+        "label": "Synthetic promise",
+        "body": "<p>On Dancing-Sprites-Pattern and Blinking-Ball, Discrete-JEPA <strong>dramatically outperforms I-JEPA</strong> <pc-cite key='assran2023ijepa'></pc-cite> on long-horizon symbolic prediction. Perfect colour-prediction accuracy holds across 200 timesteps; LPIPS and MSE at 1,000 steps are <strong>6× and 5× better</strong> than I-JEPA respectively. The discrete index space prevents error accumulation that inevitably degrades continuous representations over extended horizons.</p>"
+      },
+      "b": {
+        "label": "Real-world gap",
+        "body": "<p>Both test environments use controlled 64×64 synthetic sequences with fixed spatial layouts and simple color/position rules. No evaluation on natural images, egocentric video, or robotic planning tasks exists. Whether semantic tokens trained on synthetic sequences transfer to the high-dimensional, ambiguous representations needed for real perception remains fully open.</p>"
+      }
+    }
+    </script>
+  </pc-toggle>
+
+  <p class="pc-fade-in">The impact framing is careful about the stakes on both sides. Enhanced symbolic reasoning and long-horizon planning are valuable for autonomous driving and scientific discovery — but more capable planning agents also carry misuse risks: surveillance, autonomous decision-making without oversight, and goal-directed behaviour that diverges from human intentions. Discretization brings one concrete mitigation: the codebook structure makes the model's internal representations more interpretable and monitorable than continuous latent spaces, potentially making misalignment easier to detect.</p>
+
+  <aside class="pc-callout pc-callout--alt pc-fade-in">
+    <div class="pc-callout-title">Safety note (Impact Statement)</div>
+    Improved interpretability is a side-effect of discretization — but it does not eliminate misuse risk. The authors explicitly call for continued development of safety frameworks before deploying systems with enhanced planning capabilities in unsupervised or high-stakes settings.
+  </aside>
+
+  <aside class="pc-callout pc-fade-in">
+    <div class="pc-callout-title">Takeaway</div>
+    Replacing continuous JEPA representations with discrete semantic tokens does more than improve a benchmark score — it induces a qualitative shift from reactive next-step mimicry to sustained rule-governed prediction. That shift, demonstrated on synthetic tasks, is the candidate mechanism for symbolic visual world modeling.
+  </aside>
+
+</div>

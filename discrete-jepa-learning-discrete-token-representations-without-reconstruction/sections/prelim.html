@@ -1,0 +1,72 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-eyebrow pc-fade-in">§3 · preliminaries</div>
+  <div class="pc-source" data-page="3">p. 3</div>
+
+  <p class="pc-fade-in">
+    <pc-term def="Self-supervised architecture that predicts masked representations in latent space rather than in pixel space, avoiding the pixel-reconstruction bias that drives tokens toward fine-grained texture detail.">I-JEPA</pc-term>
+    <pc-cite key="assran2023ijepa"></pc-cite> — the direct ancestor of Discrete-JEPA — rests on three
+    components: a <em>context encoder</em> <code>f<sub>θ<sup>c</sup></sub></code> that processes the
+    visible (unmasked) patches, an <em>EMA target encoder</em> <code>f<sub>θ̄<sup>t</sup></sub></code>
+    whose weights are a slow exponential moving average of the context encoder's weights
+    <pc-cite key="he2020moco"></pc-cite><pc-cite key="caron2021dino"></pc-cite>,
+    and a lightweight <em>predictor</em> <code>g<sub>φ</sub></code> that, given the context
+    representations and a set of masked target positions, predicts what the target encoder would
+    output at those locations. <strong>The EMA coupling is what prevents representational
+    collapse</strong>: the target encoder is a momentum-lagged copy, not a jointly optimized
+    twin, so the gradient cannot trivially make both sides agree by collapsing.
+  </p>
+
+  <pc-chain>
+    <script type="application/json">
+    [
+      {
+        "label": "Context Processing",
+        "sub": "z_c = f_{θ^c}(x_V)",
+        "detail": "Visible (unmasked) patches x_V are fed to the context encoder. Masked positions are replaced with learnable tokens so the encoder never sees ground-truth target content."
+      },
+      {
+        "label": "Target Processing",
+        "sub": "z_t = f_{θ̄^t}(x_M)",
+        "detail": "The entire image — including masked patches — is processed by the EMA target encoder to produce ground-truth representations at the target locations M. No gradient flows into this encoder directly."
+      },
+      {
+        "label": "Prediction",
+        "sub": "ẑ_t = g_φ(z_c, M)",
+        "detail": "The predictor takes the context representations and the positional indices of masked targets M, and outputs predicted representations ẑ_t. Training minimises the L2 distance between ẑ_t and z_t in representation space — never in pixel space."
+      }
+    ]
+    </script>
+  </pc-chain>
+
+  <p class="pc-fade-in">
+    The training signal is an L2 distance in representation space, summed over all masked target
+    positions <code>i ∈ M</code>. Because the loss lives in the encoder's latent space and not in
+    pixel space <pc-cite key="lecun2022"></pc-cite>, the encoder is free to discard low-level
+    texture and retain only the features needed to predict masked context — a property Discrete-JEPA
+    inherits and pushes further by replacing those continuous latents with discrete codebook entries.
+  </p>
+
+  <pc-equation>
+    <script type="application/json">
+    {
+      "tex": "\\mathcal{L}_{\\text{I-JEPA}} = \\sum_{i \\in M} \\left\\| f_{\\bar{\\theta}^t}(x_i) - g_{\\varphi}\\!\\left(f_{\\theta^c}(x_V),\\, i\\right) \\right\\|_2^2",
+      "wide": true,
+      "terms": {
+        "f_{\\theta^c}": "Context encoder — processes only the visible (unmasked) patches x_V.",
+        "f_{\\bar{\\theta}^t}": "EMA target encoder — parameters are an exponential moving average of f_{θ^c}; never updated by backprop directly.",
+        "g_{\\varphi}": "Predictor — lightweight network that maps context representations and a target position index i to a predicted representation.",
+        "x_V": "Visible context patches — the unmasked portion of the input image passed to the context encoder.",
+        "M": "Set of masked target positions — the spatial indices whose representations must be predicted.",
+        "i": "Position index of a single masked target patch; the predictor receives this as a positional query."
+      }
+    }
+    </script>
+  </pc-equation>
+
+  <aside class="pc-callout pc-fade-in">
+    <div class="pc-callout-title">Why this matters</div>
+    Discrete-JEPA only changes the semantic stream — everything below stays. The context encoder,
+    EMA target encoder, predictor, and latent-space L2 loss remain exactly as above; the new work
+    sits on top, quantising the semantic representation into discrete codebook tokens.
+  </aside>
+</div>
