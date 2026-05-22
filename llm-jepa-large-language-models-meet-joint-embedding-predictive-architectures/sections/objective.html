@@ -1,0 +1,248 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-eyebrow pc-fade-in">§3.1–3.2</div>
+  <div class="pc-source" data-page="3">pp. 3–4</div>
+
+  <p class="pc-fade-in">
+    Every (Text, Code) pair in a dataset like NL-RX or Spider encodes the same underlying meaning twice — once in natural language, once in a formal language. That redundancy is precisely the signal that
+    <pc-term def="Joint Embedding Predictive Architecture: a self-supervised objective that trains a predictor to map from the embedding of one view to the embedding of another, without reconstructing raw tokens.">JEPA</pc-term>
+    was built to exploit. <pc-cite key="assran2023"></pc-cite><pc-cite key="bardes2024"></pc-cite> Vision JEPAs already show that embedding-space prediction outperforms input-space reconstruction for perception tasks; LLM-JEPA ports that idea to language by treating the (Text, Code) split as its two views.
+  </p>
+
+  <figure class="pc-figure pc-figure--zoom pc-rise">
+    <img src="figures/img-002-004.png" alt="Spider dataset example showing Text (db_id and question) and Code (SQL query) as two views of the same meaning">
+    <figcaption>Two views, one meaning. A Spider sample pairs a natural-language question (Text) with its SQL query (Code). LLM-JEPA treats these as two views of the same underlying fact and trains a predictor to map between their embeddings — analogously to how vision JEPAs predict across augmented image views.</figcaption>
+  </figure>
+
+  <p class="pc-fade-in">
+    <strong>The objective is a sum of two terms.</strong> The first is the standard next-token prediction loss, preserving the model's generative capability. The second is a JEPA term — a distance in embedding space between a <em>predicted</em> embedding (derived from Text alone) and the <em>actual</em> embedding of Code. A scalar <strong><code>λ</code></strong> weights their contributions.
+  </p>
+
+  <figure class="pc-figure pc-rise">
+    <svg viewBox="0 0 720 380" role="img" aria-label="Two forward passes through the shared LLM: a block-causal pass that produces Enc(Text) and Enc(Code), and a [PRED]-token pass that produces Pred(Enc(Text)). A distance between Pred and Enc(Code) is the JEPA term; next-token loss on Text is the LLM term." xmlns="http://www.w3.org/2000/svg">
+      <style>
+        .lj-bg     { fill: var(--paper); stroke: var(--border); stroke-width: 1; }
+        .lj-llm    { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; }
+        .lj-text   { fill: var(--accent-soft); stroke: var(--accent); }
+        .lj-code   { fill: var(--accent-alt-soft); stroke: var(--accent-alt); }
+        .lj-pred   { fill: var(--accent-alt-soft); stroke: var(--accent-alt); stroke-dasharray: 3 2; }
+        .lj-arrow  { stroke: var(--ink-soft); stroke-width: 1.5; fill: none; }
+        .lj-dist   { stroke: var(--accent-alt); stroke-width: 2; stroke-dasharray: 5 4; fill: none; }
+        .lj-lbl    { font: 600 12px var(--sans, system-ui); fill: var(--ink); }
+        .lj-cap    { font: 11px var(--sans, system-ui); fill: var(--ink-soft); }
+        .lj-tok    { font: 11px var(--mono, ui-monospace); fill: var(--ink); }
+        .lj-eq     { font: 13px var(--serif, Georgia); fill: var(--ink); font-style: italic; }
+        @keyframes lj-march { to { stroke-dashoffset: -18; } }
+        .lj-dist   { animation: lj-march 1.4s linear infinite; }
+        @keyframes lj-pulse {
+          0%, 100% { fill: var(--accent-alt-soft); }
+          50%      { fill: var(--accent-alt); }
+        }
+        .lj-pred   { animation: lj-pulse 2.2s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) {
+          .lj-dist, .lj-pred { animation: none; }
+        }
+      </style>
+      <defs>
+        <marker id="lj-arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-soft)" />
+        </marker>
+      </defs>
+
+      <!-- PASS 1: block-causal over [Text || Code] -->
+      <rect class="lj-bg" x="20" y="20" width="320" height="160" rx="8" />
+      <text class="lj-lbl"  x="36" y="42">Pass 1 — block-causal mask</text>
+      <text class="lj-cap"  x="36" y="58">[ Text ‖ Code ] in one sequence; views can't see each other.</text>
+
+      <!-- Text + Code token rows -->
+      <g transform="translate(36, 76)">
+        <rect class="lj-text" x="0"   y="0" width="22" height="22" rx="3"/>
+        <rect class="lj-text" x="26"  y="0" width="22" height="22" rx="3"/>
+        <rect class="lj-text" x="52"  y="0" width="22" height="22" rx="3"/>
+        <rect class="lj-text" x="78"  y="0" width="22" height="22" rx="3"/>
+        <rect class="lj-code" x="116" y="0" width="22" height="22" rx="3"/>
+        <rect class="lj-code" x="142" y="0" width="22" height="22" rx="3"/>
+        <rect class="lj-code" x="168" y="0" width="22" height="22" rx="3"/>
+        <rect class="lj-code" x="194" y="0" width="22" height="22" rx="3"/>
+        <rect class="lj-code" x="220" y="0" width="22" height="22" rx="3"/>
+        <text class="lj-cap"  x="0"   y="38">Text</text>
+        <text class="lj-cap"  x="116" y="38">Code</text>
+      </g>
+
+      <!-- Shared LLM box (pass 1) -->
+      <rect class="lj-llm" x="60" y="124" width="240" height="40" rx="6"/>
+      <text class="lj-lbl" x="180" y="149" text-anchor="middle">shared LLM θ</text>
+
+      <!-- arrows down into LLM (pass 1) -->
+      <path class="lj-arrow" d="M 78 100 L 78 122" marker-end="url(#lj-arrowhead)"/>
+      <path class="lj-arrow" d="M 282 100 L 282 122" marker-end="url(#lj-arrowhead)"/>
+
+      <!-- Outputs of pass 1 -->
+      <text class="lj-tok" x="78"  y="178" text-anchor="middle">Enc(Text)</text>
+      <text class="lj-tok" x="282" y="178" text-anchor="middle">Enc(Code)</text>
+
+      <!-- PASS 2: [Text || PRED×k] -->
+      <rect class="lj-bg" x="20" y="200" width="320" height="160" rx="8"/>
+      <text class="lj-lbl" x="36" y="222">Pass 2 — predictor</text>
+      <text class="lj-cap" x="36" y="238">[ Text ‖ [PRED]<tspan dy="-3" font-size="8">×k</tspan><tspan dy="3"> </tspan>] through the same θ.</text>
+
+      <g transform="translate(36, 256)">
+        <rect class="lj-text" x="0"   y="0" width="22" height="22" rx="3"/>
+        <rect class="lj-text" x="26"  y="0" width="22" height="22" rx="3"/>
+        <rect class="lj-text" x="52"  y="0" width="22" height="22" rx="3"/>
+        <rect class="lj-text" x="78"  y="0" width="22" height="22" rx="3"/>
+        <rect class="lj-pred" x="116" y="0" width="22" height="22" rx="3"/>
+        <rect class="lj-pred" x="142" y="0" width="22" height="22" rx="3"/>
+        <rect class="lj-pred" x="168" y="0" width="22" height="22" rx="3"/>
+        <text class="lj-cap"  x="0"   y="38">Text</text>
+        <text class="lj-cap"  x="116" y="38">[PRED]<tspan dy="-3" font-size="8">×k</tspan></text>
+      </g>
+
+      <rect class="lj-llm" x="60" y="304" width="240" height="40" rx="6"/>
+      <text class="lj-lbl" x="180" y="329" text-anchor="middle">shared LLM θ</text>
+      <text class="lj-cap" x="180" y="298" text-anchor="middle">— weights tied to pass 1 —</text>
+
+      <path class="lj-arrow" d="M 78 280 L 78 302" marker-end="url(#lj-arrowhead)"/>
+      <path class="lj-arrow" d="M 250 280 L 250 302" marker-end="url(#lj-arrowhead)"/>
+
+      <text class="lj-tok" x="180" y="358" text-anchor="middle">Pred(Enc(Text))</text>
+
+      <!-- LOSS COLUMN -->
+      <text class="lj-lbl" x="380" y="42">Loss assembly</text>
+
+      <!-- L_LLM arrow from pass 1 -->
+      <path class="lj-arrow" d="M 340 100 C 380 100, 400 100, 460 100" marker-end="url(#lj-arrowhead)"/>
+      <text class="lj-cap" x="460" y="88">next-token on Text</text>
+      <text class="lj-eq"  x="460" y="106">L<tspan dy="3" font-size="9">LLM</tspan></text>
+
+      <!-- distance line: from Pred (bottom) up to Enc(Code) (top) -->
+      <path class="lj-dist" d="M 320 358 C 460 358, 460 180, 322 178" />
+      <text class="lj-cap" x="500" y="270" text-anchor="middle">d( · , · )</text>
+      <text class="lj-eq"  x="500" y="288" text-anchor="middle">= 1 − cos</text>
+
+      <!-- Final loss assembly box -->
+      <rect class="lj-bg" x="380" y="140" width="320" height="60" rx="8"/>
+      <text class="lj-eq" x="540" y="176" text-anchor="middle">
+        L = L<tspan dy="3" font-size="9">LLM</tspan><tspan dy="-3" font-size="13"> + λ · d(Pred, Enc(Code))</tspan>
+      </text>
+
+      <!-- legend -->
+      <g transform="translate(380, 320)">
+        <rect class="lj-text" x="0"  y="0" width="14" height="14" rx="2"/>
+        <text class="lj-cap" x="20" y="11">Text token</text>
+        <rect class="lj-code" x="100" y="0" width="14" height="14" rx="2"/>
+        <text class="lj-cap" x="120" y="11">Code token</text>
+        <rect class="lj-pred" x="210" y="0" width="14" height="14" rx="2"/>
+        <text class="lj-cap" x="230" y="11">[PRED] (pulsing)</text>
+      </g>
+    </svg>
+    <figcaption><strong>The forward graph.</strong> One shared LLM, called twice per step. Pass 1 uses a block-causal mask so Text and Code don't attend to each other — yielding their isolated embeddings in a single forward. Pass 2 appends <code>k</code> learnable <code>[PRED]</code> tokens to Text; the last hidden state at the final <code>[PRED]</code> position is <code>Pred(Enc(Text))</code>. The JEPA term is the cosine distance from <code>Pred(Enc(Text))</code> to <code>Enc(Code)</code>; the LLM term is the standard next-token loss on Text. Inference uses only the LLM term branch.</figcaption>
+  </figure>
+
+  <pc-equation>
+    <script type="application/json">
+    {
+      "tex": "\\mathcal{L}_{\\text{LLM-JEPA}} = \\underbrace{\\sum_{\\ell=2}^{L} \\mathcal{L}_{\\text{LLM}}(\\text{Text}_{1:\\ell-1},\\, \\text{Text}_\\ell)}_{\\text{generative capabilities}} + \\lambda \\cdot \\underbrace{d\\!\\left(\\text{Pred}(\\text{Enc}(\\text{Text})),\\; \\text{Enc}(\\text{Code})\\right)}_{\\text{abstraction capabilities}}",
+      "wide": true,
+      "terms": {
+        "\\lambda": "Scalar weight balancing the generative and JEPA terms. A hyperparameter tuned per (model, dataset) pair.",
+        "\\text{Enc}": "Encoder: the hidden state of the last token at the last layer of the LLM — the standard probing embedding, no new parameters.",
+        "\\text{Pred}": "Predictor: the LLM itself, called with k appended [PRED] tokens. Weights are tied to the main model.",
+        "d": "Distance metric. Cosine distance is used: d(u,v) = 1 − cosine(u, v). Ablations show it outperforms ℓ₂ and MSE.",
+        "\\text{Text}": "The natural-language view (e.g., a regex description, a SQL question). Processed causally, independently of Code.",
+        "\\text{Code}": "The formal-language view (e.g., a regex, a SQL query). Its embedding is the prediction target."
+      }
+    }
+    </script>
+  </pc-equation>
+
+  <p class="pc-fade-in">
+    Three design choices determine how the two terms are computed. Each is deliberately lightweight: no new modules, no separate optimizer states, no extra parameters beyond the scalar <code>λ</code> and the integer <code>k</code>.
+  </p>
+
+  <pc-grid>
+    <script type="application/json">
+    [
+      {
+        "eyebrow": "Encoder",
+        "title": "Last token, last layer",
+        "body": "The embedding of any input sequence is the hidden state of its final token at the final layer — exactly the probing embedding used in standard LLM analysis. No new parameters."
+      },
+      {
+        "eyebrow": "Metric",
+        "title": "Cosine distance",
+        "body": "Following vision JEPA practice, d(u,v) = 1 − cosine(u,v). Ablations in §4.3 show cosine outperforms ℓ₂ and MSE; InfoNCE collapses to below-baseline accuracy."
+      },
+      {
+        "eyebrow": "Predictor",
+        "title": "k tied [PRED] tokens",
+        "body": "Appending k special tokens to Text and reading their last embedding gives Pred(Enc(Text)). Weights are shared with the LLM. When k = 0, Pred is the identity map."
+      }
+    ]
+    </script>
+  </pc-grid>
+
+  <p class="pc-fade-in">
+    The central implementation challenge is computing <code>Enc(Text)</code> and <code>Enc(Code)</code> without letting either view attend to the other, while still sharing a single forward pass. A naive concatenation would pollute the Code embedding with Text tokens. The solution is a <em>block-causal attention mask</em>: the sequence-length × sequence-length attention matrix is initialized to −∞ everywhere, then two independent lower-triangular causal masks are written — one covering the Text span, one covering the Code span. Each view attends only within itself.
+    <pc-cite key="balestriero2024"></pc-cite><pc-cite key="barrault2024"></pc-cite><pc-cite key="wang2025"></pc-cite>
+  </p>
+
+  <pc-pseudocode>
+    <script type="application/json">
+    {
+      "title": "Block-causal attention mask (the second view does not see the first)",
+      "lines": [
+        "def additive_mask(k: int):",
+        "    \"\"\"Returns a k by k triangle mask.\"\"\"",
+        "    mask = torch.zeros((k, k), dtype=torch.float32)",
+        "    mask[torch.triu(torch.ones(k, k), diagonal=1) == 1] = -torch.inf",
+        "    return mask",
+        "",
+        "# Initialize all elements to -inf (block all attention by default).",
+        "mask = torch.full((batch_size * 2, 1, seq_length, seq_length), -torch.inf).to(device)",
+        "",
+        "# Text starts at t_start with t_size tokens.",
+        "# Code starts at c_start with c_size tokens.",
+        "# Apply independent causal masks to each view for the i-th batch item.",
+        "mask[i, :, t_start : t_start + t_size, t_start : t_start + t_size] = additive_mask(t_size)",
+        "mask[i, :, c_start : c_start + c_size, c_start : c_start + c_size] = additive_mask(c_size)"
+      ]
+    }
+    </script>
+  </pc-pseudocode>
+
+  <p class="pc-fade-in">
+    With this mask in place, both embeddings are available after <strong>two forward passes</strong> instead of three — one pass over the concatenated (Text ‖ Code) context with the block-causal mask, and one pass over (Text ‖ [PRED]×k) for the predictor. The extra cost during training does not appear at inference, because the JEPA term is not needed once the model is deployed. A loss-dropout strategy (covered in §5.2) reduces that overhead further by skipping the JEPA term for a random fraction of mini-batches.
+  </p>
+
+  <pc-pseudocode>
+    <script type="application/json">
+    {
+      "title": "Algorithm 1 — LLM-JEPA training step",
+      "lines": [
+        "Input: paired batch (Text x, Code y); shared LLM θ; weight λ; predictor depth k",
+        "",
+        "# Pass 1 — joint forward with block-causal mask, no cross-view attention",
+        "h = LLM_θ(concat(x, y), mask = block_causal(|x|, |y|))",
+        "Enc_text = h[last token of x,  last layer]",
+        "Enc_code = h[last token of y,  last layer]",
+        "",
+        "# Pass 2 — predictor: Text with k appended [PRED] tokens, same θ",
+        "h' = LLM_θ(concat(x, [PRED] × k))",
+        "Pred = h'[last [PRED] position,  last layer]",
+        "",
+        "# Loss = generative term on Text + JEPA term in embedding space",
+        "L_LLM  = next_token_loss(LLM_θ, x)",
+        "L_JEPA = 1 − cosine(Pred, Enc_code)              # stop-grad on Enc_code in ablations §4.3",
+        "L      = L_LLM + λ · L_JEPA",
+        "",
+        "θ ← θ − η · ∇_θ L                                # one optimizer step on tied weights"
+      ]
+    }
+    </script>
+  </pc-pseudocode>
+
+  <aside class="pc-callout pc-fade-in">
+    <div class="pc-callout-title">Core mechanism</div>
+    LLM-JEPA adds a single embedding-space term to the standard next-token loss: predict <code>Enc(Code)</code> from <code>Enc(Text)</code> using the model's own weights as the predictor. A block-causal attention mask makes both embeddings computable in two forward passes, with no new parameters and no change to the inference graph.
+  </aside>
+</div>

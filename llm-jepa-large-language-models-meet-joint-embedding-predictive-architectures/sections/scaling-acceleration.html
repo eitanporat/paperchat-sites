@@ -1,0 +1,123 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-eyebrow pc-fade-in">§5 · generality &amp; compute</div>
+  <div class="pc-source" data-page="8">pp. 8–9</div>
+
+  <p class="pc-fade-in">
+    Every result in §4 rests on a clean premise: <em>Text</em> and <em>Code</em> are two views of the same thing, so the JEPA pull is geometrically justified. A sceptic asks whether the gains evaporate the moment that clean premise breaks down — on open-domain QA where the answer is a handful of tokens, or on commonsense completion where there is no "code" in sight at all.
+  </p>
+
+  <p class="pc-fade-in">
+    Two benchmarks stress-test that premise directly. <pc-term def="NQ-Open: open-domain question-answering benchmark; a prediction is correct if any ground-truth answer string appears as a substring of the generated output.">NQ-Open</pc-term> <pc-cite key="lee2019"></pc-cite> pairs a natural-language question (<em>Text</em>) with a short answer span (<em>Code</em>) — sequences of very different lengths, far from the balanced regex / SQL duality. <pc-term def="HellaSwag: context-completion multiple-choice benchmark; the model ranks four candidate continuations by relative probability.">HellaSwag</pc-term> <pc-cite key="zellers2019"></pc-cite> goes further: both the context and its correct completion are integral parts of the question, with no near-equivalence between them. Yet LLM-JEPA improves Llama-3.2-1B-Instruct on both.
+  </p>
+
+  <pc-table>
+    <script type="application/json">
+    {
+      "title": "Table 4. QA benchmarks — Llama-3.2-1B-Instruct fine-tuning (mean ± std, 5 seeds)",
+      "columns": [
+        {"label": "Dataset",   "align": "left"},
+        {"label": "L_LLM",     "align": "right", "unit": "%"},
+        {"label": "LLM-JEPA",  "align": "right", "unit": "%"},
+        {"label": "p-value",   "align": "right"},
+        {"label": "Config",    "align": "left"}
+      ],
+      "rows": [
+        {"cells": ["NQ-Open",   {"value": 20.12, "std": 0.41}, {"value": 21.59, "std": 0.40}, "2.44e−3", "λ=1024, k=0, lr=2e−5"]},
+        {"cells": ["HellaSwag", {"value": 69.40, "std": 0.99}, {"value": 70.51, "std": 1.20}, "0.0136",  "λ=1, k=3, lr=4e−5"], "highlight": true}
+      ],
+      "highlightBest": false,
+      "caption": "Both improvements are statistically significant (one-tailed paired t-test). NQ-Open follows the substring-match evaluation convention of Lee et al. (2019) and Izacard & Grave (2021); HellaSwag uses relative probability ranking."
+    }
+    </script>
+  </pc-table>
+
+  <p class="pc-fade-in">
+    An additional observation from HellaSwag is worth flagging: accuracy keeps improving as <code>λ</code> scales all the way to 1024, with no plateau in sight. The JEPA regularizer can absorb far more weight than conventional loss-balancing intuitions suggest.
+  </p>
+
+  <figure class="pc-figure pc-figure--zoom pc-rise">
+    <img src="figures/img-020-020.png" alt="HellaSwag accuracy vs λ scaling to 1024">
+    <figcaption>Figure 9. On HellaSwag, accuracy keeps climbing as λ scales up to 1024 — the JEPA regularizer takes much more weight than typical loss balancing assumes.</figcaption>
+  </figure>
+
+  <p class="pc-fade-in">
+    The same question applies to <em>reasoning-distilled</em> models, where the internal representations are already heavily shaped by chain-of-thought and reinforcement signals. Adding an embedding-space objective might conflict with those specialised representations — or it might not. Experiments on GSM8K with Qwen3-1.7B <pc-cite key="yang2025"></pc-cite> and DeepSeek-R1-Distill-Qwen-1.5B <pc-cite key="deepseek2025"></pc-cite> show statistically significant gains in both cases: <strong>the regularizer composes with reasoning capability rather than fighting it</strong>.
+  </p>
+
+  <pc-table>
+    <script type="application/json">
+    {
+      "title": "Table 5. GSM8K on reasoning models (mean ± std, 5 seeds)",
+      "columns": [
+        {"label": "Model",              "align": "left"},
+        {"label": "L_LLM",              "align": "right", "unit": "%"},
+        {"label": "LLM-JEPA",           "align": "right", "unit": "%"},
+        {"label": "p-value",            "align": "right"},
+        {"label": "Config",             "align": "left"}
+      ],
+      "rows": [
+        {"cells": ["Qwen3-1.7B",             {"value": 44.32, "std": 0.39}, {"value": 45.00, "std": 0.40}, "0.0115", "λ=1, k=0, lr=4e−5"]},
+        {"cells": ["R1-Distill-Qwen-1.5B",   {"value": 13.87, "std": 1.01}, {"value": 15.04, "std": 0.15}, "0.0396", "λ=0.5, k=1, lr=8e−5"], "highlight": true}
+      ],
+      "highlightBest": false,
+      "caption": "Statistically significant improvements on both reasoning models — the JEPA objective does not conflict with existing reasoning-oriented representations."
+    }
+    </script>
+  </pc-table>
+
+  <p class="pc-fade-in">
+    The remaining obstacle to broad adoption is compute. Each training step normally requires two forward passes instead of one — a substantial overhead. <strong>Random JEPA-loss dropout</strong> addresses this directly: on a fraction <code>α</code> of batches the JEPA term is simply skipped, eliminating those extra forward passes entirely. Per-epoch cost becomes <code>2 − α</code> times the baseline instead of 2×.
+  </p>
+
+  <pc-toggle>
+    <script type="application/json">
+    {
+      "a": {
+        "label": "What loss dropout does",
+        "body": "<p>At dropout rate α, each batch independently draws a Bernoulli coin. Heads (probability α): skip the JEPA forward pass entirely — zero extra compute, standard next-token loss only. Tails (probability 1−α): run the full LLM-JEPA step. Per-epoch cost is <strong>2 − α</strong> times baseline. At α = 0.5 the overhead halves; at α = 0.75 it drops to 1.25×.</p>"
+      },
+      "b": {
+        "label": "Co-tuning λ with α",
+        "body": "<p>Because the JEPA term fires only a fraction of the time, its <em>effective</em> strength is λ · (1 − α). Keeping this product approximately constant is the empirically observed rule of thumb for co-tuning the two hyperparameters. Concretely: doubling α from 0.5 to ~0.75 while also doubling λ recovers — and in several rows surpasses — the non-dropout accuracy.</p>"
+      }
+    }
+    </script>
+  </pc-toggle>
+
+  <p class="pc-fade-in">
+    The PFLOPs-matched comparison in Figure 5 of the paper drives the point home: LLM-JEPA with LD=0.5 or LD=0.75 converges to higher accuracy than the baseline at the same compute budget — loss dropout is not just a cost-saving concession, it is an accuracy-improving technique in its own right when λ is co-scaled.
+  </p>
+
+  <pc-table class="l-page">
+    <script type="application/json">
+    {
+      "title": "Table 6. NL-RX-SYNTH accuracy (%) at matched compute — six PFLOPs checkpoints, 4.83 PFLOPs apart",
+      "columns": [
+        {"label": "PFLOPs step", "align": "left"},
+        {"label": "LD=0, λ=1",   "align": "right", "unit": "%"},
+        {"label": "LD=0.5, λ=1", "align": "right", "unit": "%"},
+        {"label": "LD=0.5, λ=2", "align": "right", "unit": "%"},
+        {"label": "LD=0.75, λ=1","align": "right", "unit": "%"},
+        {"label": "LD=0.75, λ=2","align": "right", "unit": "%"},
+        {"label": "LD=0.75, λ=4","align": "right", "unit": "%"}
+      ],
+      "rows": [
+        {"cells": ["4.83",  {"value": 19.85, "std": 2.44}, {"value": 25.00, "std": 3.73}, {"value": 24.50, "std": 4.40}, {"value": 32.46, "std": 3.32}, {"value": 32.10, "std": 3.11}, {"value": 31.45, "std": 3.34}]},
+        {"cells": ["9.66",  {"value": 40.70, "std": 2.67}, {"value": 48.96, "std": 6.03}, {"value": 50.71, "std": 6.52}, {"value": 53.77, "std": 5.53}, {"value": 57.03, "std": 3.51}, {"value": 56.75, "std": 4.63}]},
+        {"cells": ["14.49", {"value": 55.60, "std": 5.16}, {"value": 64.08, "std": 2.75}, {"value": 63.79, "std": 5.96}, {"value": 64.51, "std": 7.28}, {"value": 67.03, "std": 3.08}, {"value": 65.32, "std": 3.54}]},
+        {"cells": ["19.32", {"value": 60.43, "std": 3.21}, {"value": 69.87, "std": 2.48}, {"value": 70.11, "std": 3.15}, {"value": 67.80, "std": 4.94}, {"value": 66.80, "std": 4.06}, {"value": 68.93, "std": 4.59}]},
+        {"cells": ["24.15", {"value": 63.57, "std": 1.01}, {"value": 69.74, "std": 2.99}, {"value": 71.20, "std": 2.17}, {"value": 70.00, "std": 4.74}, {"value": 70.77, "std": 4.08}, {"value": 72.42, "std": 1.28}]},
+        {"cells": ["28.98", {"value": 63.96, "std": 1.07}, {"value": 70.60, "std": 3.05}, {"value": 72.11, "std": 2.18}, {"value": 70.31, "std": 4.64}, {"value": 70.92, "std": 4.62}, {"value": 73.08, "std": 1.28}], "highlight": true}
+      ],
+      "highlightBest": true,
+      "caption": "Table 6. NL-RX-SYNTH accuracy at matched compute. Loss-dropout at α=0.5 or 0.75 spends fewer PFLOPs and lands higher accuracy when λ is co-scaled."
+    }
+    </script>
+  </pc-table>
+
+  <aside class="pc-callout">
+    <div class="pc-callout-title">Takeaway</div>
+    LLM-JEPA generalises beyond natural (text, code) pairs — it lifts accuracy on open QA and reasoning benchmarks — and loss dropout makes it competitive on FLOPs, provided <code>λ · (1 − α)</code> is held roughly constant when tuning the dropout rate.
+  </aside>
+
+</div>

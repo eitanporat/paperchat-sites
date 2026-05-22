@@ -1,0 +1,116 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-eyebrow pc-fade-in">§4.2 – §4.3 · Appendix A.2, A.3</div>
+  <div class="pc-source" data-page="7">pp. 7–8, 16–20</div>
+
+  <p class="pc-fade-in">
+    <strong>The JEPA loss sculpts a near-linear geometry between Text and Code embeddings</strong> — a
+    structural signature absent from both the base model and the standard NTP fine-tune. Two
+    diagnostics make this concrete: a t-SNE projection and a singular-value decomposition of
+    <code>Enc(Text) − Enc(Code)</code>.
+  </p>
+
+  <p class="pc-fade-in">
+    t-SNE plots of the four conditions (base model, NTP fine-tune, LLM-JEPA k=0, LLM-JEPA k=1)
+    tell a clear story: the base model has weak but non-zero cluster structure; NTP fine-tuning
+    <em>shatters</em> it — Text and Code points intermix without pattern; both LLM-JEPA variants
+    recover tight, paired clusters where each text point sits beside its code counterpart (Figure 6, appendix).
+    The quantitative signal comes from fitting a linear map <code>X</code> that minimises
+    <code>‖Enc(Text)·X − Enc(Code)‖</code>. Under NTP fine-tuning the residual sits at <strong>3 035</strong> —
+    barely lower than the untrained base model's 3 053. LLM-JEPA collapses it to <strong>4.47</strong> (k=0)
+    or <strong>4.04</strong> (k=1): a <em>three-order-of-magnitude</em> drop. The top-100 singular values of the
+    residual matrix fall from ~341 down to ~17, meaning the residual is confined to a narrow
+    subspace<pc-cite key="jing2021"></pc-cite>.
+  </p>
+
+  <pc-table>
+    <script type="application/json">
+    {
+      "title": "Table 14 (appendix). Text→Code mapping linearity",
+      "caption": "LLM-JEPA compresses the Text→Code mapping into an almost-linear transform — the residual falls by three orders of magnitude versus NTP fine-tuning.",
+      "columns": [
+        {"label": "Model / setting", "align": "left"},
+        {"label": "min ‖Enc(Text)·X − Enc(Code)‖", "align": "right"},
+        {"label": "Avg. top-100 singular value", "align": "right"}
+      ],
+      "rows": [
+        {"cells": ["Base model", "3053.31", "310.73"]},
+        {"cells": ["NTP fine-tune (L_LLM)", "3035.01", "341.50"]},
+        {"cells": ["LLM-JEPA k=0", "4.47", "94.84"], "highlight": true},
+        {"cells": ["LLM-JEPA k=1", "4.04", "16.92"], "highlight": true}
+      ],
+      "highlightBest": false
+    }
+    </script>
+  </pc-table>
+
+  <p class="pc-fade-in">
+    This near-linearity may be <em>why</em> LLM-JEPA generalises well: once Text and Code embeddings are
+    related by a simple affine map, the model's decoder has an easy path from a natural-language
+    prompt to the correct code structure. Accuracy follows geometry.
+  </p>
+
+  <pc-table>
+    <script type="application/json">
+    {
+      "title": "Table 3. Design-choice ablation on NL-RX-SYNTH",
+      "caption": "Llama-3.2-1B-Instruct, lr=2e-5, λ=1, k=1. Cosine distance + appended [PRED] token + Text→Code direction is the winning combination. The ℓ2 variant collapses representations entirely (2.22%), and InfoNCE is unstable and worse than the baseline.",
+      "columns": [
+        {"label": "Method", "align": "left"},
+        {"label": "Accuracy (%)", "align": "right"}
+      ],
+      "rows": [
+        {"cells": ["Baseline (NTP)", {"value": 57.29, "std": 5.32}]},
+        {"cells": ["LLM-JEPA — cosine (ours)", {"value": 71.46, "std": 1.34}], "highlight": true},
+        {"cells": ["ℓ2-norm", {"value": 2.22, "std": 0.07}]},
+        {"cells": ["MSE", {"value": 70.64, "std": 2.05}]},
+        {"cells": ["Prepend [PRED]", {"value": 68.07, "std": 2.57}]},
+        {"cells": ["Code → Text", {"value": 65.70, "std": 2.63}]},
+        {"cells": ["InfoNCE", {"value": 34.40, "std": 6.10}]}
+      ],
+      "highlightBest": false
+    }
+    </script>
+  </pc-table>
+
+  <p class="pc-fade-in">
+    Three design choices stand out. First, <strong>the distance metric is load-bearing</strong>: the ℓ2 norm
+    catastrophically collapses representations to 2.22% accuracy, echoing dimensional-collapse
+    pathologies documented in contrastive learning<pc-cite key="jing2021"></pc-cite>. MSE recovers
+    (70.64%), but cosine<pc-cite key="chen2020"></pc-cite><pc-cite key="radford2021"></pc-cite>
+    edges it out and is the standard in vision JEPAs. Second, <strong>appending [PRED] beats prepending</strong>
+    (71.46% vs 68.07%) — the autoregressive stack has already processed the full context before
+    producing the predictor embedding, so the last position carries more. Third,
+    <strong>Text→Code is the natural direction</strong> (71.46% vs 65.70%): asking the model to predict the
+    structured output's embedding from the natural-language query aligns with the generative task.
+    InfoNCE<pc-cite key="vandenoord2018"></pc-cite> at the standard temperature τ=0.07 performs
+    worse than even the baseline, with variance three to four times larger — the in-batch negative
+    sampling pressure is mis-calibrated for this asymmetric task.
+  </p>
+
+  <p class="pc-fade-in">
+    The hyperparameter surface <code>(λ, k) ∈ {0.5, 1, 2, 4} × {0, 1, 2, 3, 4}</code> is smooth enough
+    to navigate by grid search, though no single corner dominates across all model–dataset pairs.
+    For Llama-3.2-1B on NL-RX-SYNTH the grid looks like this — adjacent cells differ by at most
+    2–3 points, yet the peak (λ=2, k=3, 60.59%) sits nowhere obvious a priori:
+  </p>
+
+  <figure class="pc-figure pc-figure--zoom pc-rise">
+    <img src="figures/img-017-018.png" alt="Accuracy heatmap over lambda and k for Llama-3.2-1B fine-tune on NL-RX-SYNTH" style="width:100%; max-width:680px; display:block; margin:0 auto;">
+    <figcaption>Figure 7a (appendix). Accuracy (%) over (λ, k) ∈ {0.5,1,2} × {0,1,2,3,4}, Llama-3.2-1B on NL-RX-SYNTH, 5 seeds each. Adjacent cells vary by 2–3 points; the optimum sits at λ=2, k=3 (60.59%).</figcaption>
+  </figure>
+
+  <p class="pc-fade-in">
+    The five Figure-7 panels (GSM8K, Spider, gemma, OpenELM, OLMo) all confirm the same
+    qualitative pattern: optima drift unpredictably across the grid, yet neighbouring cells
+    are close, so a coarse sweep over <code>(k, λ) ∈ {0,1,2,3,4} × {0.5,1,2,4}</code> reliably
+    lands near the best configuration at acceptable compute cost.
+  </p>
+
+  <aside class="pc-callout">
+    <div class="pc-callout-title">Takeaway</div>
+    Cosine distance, an appended <code>[PRED]</code> token, and the Text→Code direction are the right
+    recipe — each choice is load-bearing. The gain is not incidental: the JEPA loss reshapes the
+    entire embedding geometry into a near-linear, low-rank mapping between natural language and
+    code, and that structure is what drives downstream accuracy.
+  </aside>
+</div>

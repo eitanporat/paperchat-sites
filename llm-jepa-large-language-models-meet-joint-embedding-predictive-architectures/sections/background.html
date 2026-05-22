@@ -1,0 +1,31 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-eyebrow pc-fade-in">§2 · Background</div>
+  <div class="pc-source" data-page="2">pp. 2–3</div>
+
+  <p class="pc-fade-in">Every modern LLM is trained to predict the next token. Given a sequence packed into a single context window, the model reads tokens <code>Text_{1:L-1}</code> through an encoder and a linear classifier head, then minimises the cross-entropy against the true next token <code>Text_L</code>. Summed autoregressively over all positions, this one objective has driven GPT, PaLM, and their descendants.</p>
+
+  <pc-equation>
+    <script type="application/json">
+    {
+      "tex": "\\mathcal{L}_{\\text{LLM}}(\\text{Text}_{1:L-1},\\, \\text{Text}_L) = \\mathrm{XEnt}\\!\\left(\\mathrm{Classifier}\\!\\left(\\mathrm{Enc}(\\text{Text}_{1:L-1})\\right),\\; \\text{Text}_L\\right)",
+      "terms": {
+        "\\mathrm{Enc}": "The LLM backbone — a causal Transformer that maps a token sequence to a sequence of hidden states.",
+        "\\mathrm{Classifier}": "A linear projection (unembedding) that maps the final hidden state to a logit vector over the vocabulary.",
+        "\\text{Text}_{1:L-1}": "The context — all tokens up to but not including position L.",
+        "\\text{Text}_L": "The target token at position L; cross-entropy is taken against its one-hot label."
+      }
+    }
+    </script>
+  </pc-equation>
+
+  <p class="pc-fade-in">This input-space reconstruction objective is deliberately preserved in LLM-JEPA — it is not replaced but augmented. That design choice is what separates this work from every prior attempt to bring embedding-space training to language.</p>
+
+  <p class="pc-fade-in">Earlier approaches discovered that the embedding space is a richer place to supervise language representations than the token surface, but each paid a steep price. SimCSE <pc-cite key="gao2021"></pc-cite> treats two dropout-perturbed views of the same sentence as positives in a contrastive loss, producing state-of-the-art sentence embeddings — but the resulting model cannot generate text. Sentence-T5 <pc-cite key="ni2021"></pc-cite> scales encoder representations from pretrained T5 checkpoints with no generative output. Weakly supervised text-pair contrastive training <pc-cite key="wang2022"></pc-cite> learns joint embeddings from naturally paired sentences, again forfeiting the decoder. Sentence-BERT <pc-cite key="reimers2019"></pc-cite> grafts a semantic similarity loss onto BERT, improving performance on semantic tasks — but BERT has no autoregressive generation to protect in the first place.</p>
+
+  <aside class="pc-callout pc-fade-in">
+    <div class="pc-callout-title">The trade-off every prior method accepted</div>
+    Embedding-space objectives improve <em>representation quality</em> for retrieval and classification, but the models they produce cannot generate — making them incompatible with the evaluation protocols and downstream use-cases that define modern LLM utility.
+  </aside>
+
+  <p class="pc-fade-in">The pattern is consistent: move supervision into embedding space, lose the generator. LLM-JEPA breaks that trade-off by treating <code>L_LLM</code> as a floor, not a ceiling — and then stacking a JEPA objective on top of it without touching the generative pathway at all.</p>
+</div>
