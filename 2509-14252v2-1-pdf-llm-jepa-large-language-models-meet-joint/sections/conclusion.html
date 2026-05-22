@@ -1,0 +1,23 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-eyebrow pc-fade-in">§6 · Conclusion</div>
+  <div class="pc-source" data-page="9">p. 9</div>
+
+  <p class="pc-fade-in">
+    Every benefit JEPA training brought to vision perception <pc-cite key="lecun2022"></pc-cite> — structured latent geometry, resistance to low-level noise, near-linear alignment between views — appears in language too, once the objective is added. The mechanism requires no architectural surgery: the same LLM encoder that drives next-token prediction also runs the embedding-space term, using tied weights and a block-causal attention mask so the two views never contaminate each other. Generative capability is preserved in full <pc-cite key="balestriero2024"></pc-cite>; what changes is the shape of the latent space.
+  </p>
+
+  <aside class="pc-callout pc-fade-in">
+    <div class="pc-callout-title">The LLM-JEPA recipe</div>
+    Replace the standard fine-tuning objective $\mathcal{L}_\text{LLM}$ with
+    $$\mathcal{L}_\text{LLM-JEPA} = \sum_{\ell=2}^{L} \mathcal{L}_\text{LLM}(\text{Text}_{1:\ell-1},\,\text{Text}_\ell) + \lambda \cdot d\!\left(\text{Pred}(\text{Enc}(\text{Text})),\,\text{Enc}(\text{Code})\right)$$
+    where $d$ is cosine distance, $\lambda \geq 0$ weights the JEPA term, and the predictor appends $k$ learned <code>[PRED]</code> tokens to the input. Two forward passes replace one; inference is unchanged.
+  </aside>
+
+  <p class="pc-fade-in">
+    The costs are real. Training runs at roughly <strong>2× the FLOPs</strong> of standard fine-tuning — one extra forward pass per step to obtain the independent view embeddings. Random loss-dropout mitigates this, cutting per-epoch overhead to $(2 - \alpha)$ times the baseline while empirically preserving most of the accuracy gain. The two additional hyperparameters $\lambda$ and $k$ complicate tuning: their joint landscape is locally smooth — adjacent grid points usually agree — but the global optimum can appear anywhere in the $\{0,\ldots,4\} \times \{0.5,\,1,\,2,\,4\}$ sweep, with no reliable heuristic for which region to search first <pc-cite key="jing2021"></pc-cite>. That is not a quirk of this implementation; it is a known difficulty for joint-embedding objectives generally.
+  </p>
+
+  <p class="pc-fade-in">
+    The deeper open question is view construction. Every dataset used here — NL-RX, Spider, GSM8K, HellaSwag, NQ-Open — arrives with a natural second view bundled in: the regex, the SQL, the step-by-step solution, the correct continuation. Most pretraining corpora do not. Vision solved this with data-augmentation: crops, color jitter, rotations produce an unlimited supply of views from any image. Language has no settled equivalent. Until one exists, LLM-JEPA scales only as far as paired datasets reach — a narrower frontier than the method's results might suggest. Building that augmentation toolkit, or identifying paired structure in text corpora that isn't labeled as such, is where the next step lies.
+  </p>
+</div>

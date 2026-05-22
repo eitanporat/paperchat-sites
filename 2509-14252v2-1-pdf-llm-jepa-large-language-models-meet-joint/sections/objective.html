@@ -1,0 +1,100 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-eyebrow pc-fade-in">§3.1–3.2</div>
+  <div class="pc-source" data-page="3">pp. 3–4</div>
+
+  <p class="pc-fade-in">
+    Every (Text, Code) pair in a dataset like NL-RX or Spider encodes the same underlying meaning twice — once in natural language, once in a formal language. That redundancy is precisely the signal that
+    <pc-term def="Joint Embedding Predictive Architecture: a self-supervised objective that trains a predictor to map from the embedding of one view to the embedding of another, without reconstructing raw tokens.">JEPA</pc-term>
+    was built to exploit. <pc-cite key="assran2023"></pc-cite><pc-cite key="bardes2024"></pc-cite> Vision JEPAs already show that embedding-space prediction outperforms input-space reconstruction for perception tasks; LLM-JEPA ports that idea to language by treating the (Text, Code) split as its two views.
+  </p>
+
+  <figure class="pc-figure pc-figure--zoom pc-rise">
+    <img src="figures/img-002-004.png" alt="Spider dataset example showing Text (db_id and question) and Code (SQL query) as two views of the same meaning">
+    <figcaption>Two views, one meaning. A Spider sample pairs a natural-language question (Text) with its SQL query (Code). LLM-JEPA treats these as two views of the same underlying fact and trains a predictor to map between their embeddings — analogously to how vision JEPAs predict across augmented image views.</figcaption>
+  </figure>
+
+  <p class="pc-fade-in">
+    <strong>The objective is a sum of two terms.</strong> The first is the standard next-token prediction loss, preserving the model's generative capability. The second is a JEPA term — a distance in embedding space between a <em>predicted</em> embedding (derived from Text alone) and the <em>actual</em> embedding of Code. A scalar <strong><code>λ</code></strong> weights their contributions.
+  </p>
+
+  <pc-equation>
+    <script type="application/json">
+    {
+      "tex": "\\mathcal{L}_{\\text{LLM-JEPA}} = \\underbrace{\\sum_{\\ell=2}^{L} \\mathcal{L}_{\\text{LLM}}(\\text{Text}_{1:\\ell-1},\\, \\text{Text}_\\ell)}_{\\text{generative capabilities}} + \\lambda \\cdot \\underbrace{d\\!\\left(\\text{Pred}(\\text{Enc}(\\text{Text})),\\; \\text{Enc}(\\text{Code})\\right)}_{\\text{abstraction capabilities}}",
+      "wide": true,
+      "terms": {
+        "\\lambda": "Scalar weight balancing the generative and JEPA terms. A hyperparameter tuned per (model, dataset) pair.",
+        "\\text{Enc}": "Encoder: the hidden state of the last token at the last layer of the LLM — the standard probing embedding, no new parameters.",
+        "\\text{Pred}": "Predictor: the LLM itself, called with k appended [PRED] tokens. Weights are tied to the main model.",
+        "d": "Distance metric. Cosine distance is used: d(u,v) = 1 − cosine(u, v). Ablations show it outperforms ℓ₂ and MSE.",
+        "\\text{Text}": "The natural-language view (e.g., a regex description, a SQL question). Processed causally, independently of Code.",
+        "\\text{Code}": "The formal-language view (e.g., a regex, a SQL query). Its embedding is the prediction target."
+      }
+    }
+    </script>
+  </pc-equation>
+
+  <p class="pc-fade-in">
+    Three design choices determine how the two terms are computed. Each is deliberately lightweight: no new modules, no separate optimizer states, no extra parameters beyond the scalar <code>λ</code> and the integer <code>k</code>.
+  </p>
+
+  <pc-grid>
+    <script type="application/json">
+    [
+      {
+        "eyebrow": "Encoder",
+        "title": "Last token, last layer",
+        "body": "The embedding of any input sequence is the hidden state of its final token at the final layer — exactly the probing embedding used in standard LLM analysis. No new parameters."
+      },
+      {
+        "eyebrow": "Metric",
+        "title": "Cosine distance",
+        "body": "Following vision JEPA practice, d(u,v) = 1 − cosine(u,v). Ablations in §4.3 show cosine outperforms ℓ₂ and MSE; InfoNCE collapses to below-baseline accuracy."
+      },
+      {
+        "eyebrow": "Predictor",
+        "title": "k tied [PRED] tokens",
+        "body": "Appending k special tokens to Text and reading their last embedding gives Pred(Enc(Text)). Weights are shared with the LLM. When k = 0, Pred is the identity map."
+      }
+    ]
+    </script>
+  </pc-grid>
+
+  <p class="pc-fade-in">
+    The central implementation challenge is computing <code>Enc(Text)</code> and <code>Enc(Code)</code> without letting either view attend to the other, while still sharing a single forward pass. A naive concatenation would pollute the Code embedding with Text tokens. The solution is a <em>block-causal attention mask</em>: the sequence-length × sequence-length attention matrix is initialized to −∞ everywhere, then two independent lower-triangular causal masks are written — one covering the Text span, one covering the Code span. Each view attends only within itself.
+    <pc-cite key="balestriero2024"></pc-cite><pc-cite key="barrault2024"></pc-cite><pc-cite key="wang2025"></pc-cite>
+  </p>
+
+  <pc-pseudocode>
+    <script type="application/json">
+    {
+      "title": "Block-causal attention mask (the second view does not see the first)",
+      "lines": [
+        "def additive_mask(k: int):",
+        "    \"\"\"Returns a k by k triangle mask.\"\"\"",
+        "    mask = torch.zeros((k, k), dtype=torch.float32)",
+        "    mask[torch.triu(torch.ones(k, k), diagonal=1) == 1] = -torch.inf",
+        "    return mask",
+        "",
+        "# Initialize all elements to -inf (block all attention by default).",
+        "mask = torch.full((batch_size * 2, 1, seq_length, seq_length), -torch.inf).to(device)",
+        "",
+        "# Text starts at t_start with t_size tokens.",
+        "# Code starts at c_start with c_size tokens.",
+        "# Apply independent causal masks to each view for the i-th batch item.",
+        "mask[i, :, t_start : t_start + t_size, t_start : t_start + t_size] = additive_mask(t_size)",
+        "mask[i, :, c_start : c_start + c_size, c_start : c_start + c_size] = additive_mask(c_size)"
+      ]
+    }
+    </script>
+  </pc-pseudocode>
+
+  <p class="pc-fade-in">
+    With this mask in place, both embeddings are available after <strong>two forward passes</strong> instead of three — one pass over the concatenated (Text ‖ Code) context with the block-causal mask, and one pass over (Text ‖ [PRED]×k) for the predictor. The extra cost during training does not appear at inference, because the JEPA term is not needed once the model is deployed. A loss-dropout strategy (covered in §5.2) reduces that overhead further by skipping the JEPA term for a random fraction of mini-batches.
+  </p>
+
+  <aside class="pc-callout pc-fade-in">
+    <div class="pc-callout-title">Core mechanism</div>
+    LLM-JEPA adds a single embedding-space term to the standard next-token loss: predict <code>Enc(Code)</code> from <code>Enc(Text)</code> using the model's own weights as the predictor. A block-causal attention mask makes both embeddings computable in two forward passes, with no new parameters and no change to the inference graph.
+  </aside>
+</div>

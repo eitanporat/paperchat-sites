@@ -1,0 +1,75 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-eyebrow pc-fade-in">§1 · Introduction</div>
+  <div class="pc-source" data-page="1">pp. 1–2</div>
+
+  <p class="pc-fade-in">
+    Representation learning has split into two distinct traditions.
+    <em>Reconstruction-based</em> methods — today's large language models <pc-cite key="brown2020"></pc-cite> — train by predicting the exact next token, operating entirely in input space.
+    <em>Joint Embedding Predictive Architectures</em> (<pc-term def="A family of self-supervised objectives that learn representations by predicting the embedding of one view from the embedding of another, without ever reconstructing pixels or tokens.">JEPAs</pc-term>) <pc-cite key="assran2023"></pc-cite><pc-cite key="bardes2024"></pc-cite><pc-cite key="lecun2022"></pc-cite> take a different path: instead of reconstructing raw input, they enforce that different <em>views</em> of the same underlying concept can be predicted from each other in <em>embedding space</em>.
+    In vision, this distinction matters enormously — JEPAs provably avoid the noisy low-level feature bias that haunts pixel-reconstruction objectives <pc-cite key="littwin2024"></pc-cite>, at the cost of some risk of dimensional collapse <pc-cite key="jing2021"></pc-cite>.
+    In language, the JEPA side of the ledger has been blank.
+  </p>
+
+  <p class="pc-fade-in">
+    The obstacle is finding views. Vision datasets generate views for free — two photos of the same building at different times of day, two crops of the same image.
+    <strong>Language datasets already contain views too, hiding in plain sight:</strong> a natural-language description and the regex it encodes, a SQL question and the query that answers it, a GitHub issue and the code diff that resolves it <pc-cite key="jimenez2024"></pc-cite>.
+    Each pair encodes the same underlying knowledge in two different surface forms — exactly the structure JEPA requires.
+  </p>
+
+  <figure class="pc-figure pc-figure--zoom pc-rise" style="display:flex; gap:1.5rem; flex-wrap:wrap; align-items:flex-start;">
+    <div style="flex:1; min-width:220px;">
+      <img src="figures/img-002-002.png" alt="NL-RX-SYNTH example: natural-language description of a regex (Text) paired with the regex itself (Code)" style="width:100%; border-radius:6px; border:1px solid var(--ink-soft); opacity:0.9;">
+    </div>
+    <div style="flex:1; min-width:220px;">
+      <img src="figures/img-002-004.png" alt="Spider example: a database question (Text) paired with the SQL query that answers it (Code)" style="width:100%; border-radius:6px; border:1px solid var(--ink-soft); opacity:0.9;">
+    </div>
+    <figcaption style="width:100%;">
+      Two dataset examples where <strong>Text</strong> and <strong>Code</strong> are naturally two views of the same underlying knowledge — the structure JEPA objectives require.
+      Left: NL-RX-SYNTH (natural language → regular expression). Right: Spider (question + database → SQL query).
+    </figcaption>
+  </figure>
+
+  <p class="pc-fade-in">
+    LLM-JEPA exploits this structure by adding one embedding-space term to the standard next-token loss — nothing else about the model or its generative objective changes.
+    During training, the encoder embeds Text and Code independently (via a block-causal attention mask), a lightweight tied-weight predictor maps <code>Enc(Text)</code> toward <code>Enc(Code)</code>, and cosine distance between the prediction and the target embedding forms the JEPA penalty.
+    The generative loss runs unchanged alongside it.
+  </p>
+
+  <figure class="pc-figure pc-rise">
+    <img src="figures/img-002-000.png" alt="LLM-JEPA architecture: Enc(Text) feeds a predictor whose output is compared to Enc(Code) via distance D(Pred(Enc(Text)), Enc(Code))" style="max-width:420px; margin:0 auto; display:block;">
+    <figcaption>The JEPA objective in LLM-JEPA. A predictor maps the text embedding toward the code embedding in embedding space; the cosine distance between them forms the regularization term added to next-token loss.</figcaption>
+  </figure>
+
+  <aside class="pc-callout pc-fade-in">
+    <div class="pc-callout-title">Core contribution</div>
+    Treating (text, code) pairs as two views of one underlying knowledge unlocks JEPA objectives for LLMs — a single embedding-space prediction term added to the generative loss, with no change to the model architecture and no sacrifice of generative capability.
+  </aside>
+
+  <p class="pc-fade-in">
+    The headline result: <strong>across four model families</strong> (Llama-3.2, Gemma-2, OpenELM, OLMo) and four datasets (NL-RX-SYNTH, NL-RX-TURK, Spider, GSM8K), LLM-JEPA consistently outperforms next-token-prediction finetuning.
+    On NL-RX-SYNTH with Llama-3.2-1B, accuracy jumps from <strong>51.6 % to 66.6 %</strong>.
+    The gain compounds across epochs: where standard finetuning overfits after a few epochs, LLM-JEPA keeps improving — the two training curves are the clearest signature of what the embedding-space term is adding.
+  </p>
+
+  <pc-compare class="l-page">
+    <script type="application/json">
+    {
+      "title": "LLM-JEPA vs. next-token-prediction baseline — accuracy across tasks and model families",
+      "categories": ["Llama3\nSYNTH", "gemma2\nSYNTH", "OpenELM\nSYNTH", "Llama3\nSpider", "Llama3\nGSM8K", "Llama3\nTURK"],
+      "series": [
+        {"name": "Baseline (NTP)", "values": [51.6, 33.65, 12.07, 47.52, 32.36, 22.49]},
+        {"name": "LLM-JEPA (Ours)", "values": [66.6, 43.12, 25.40, 50.55, 36.36, 30.94]}
+      ],
+      "yLabel": "Accuracy (%)",
+      "yMax": 80,
+      "caption": "Figure 1a. LLM-JEPA improves over the next-token-prediction baseline across four model families on NL-RX-SYNTH, Spider, GSM8K, and NL-RX-TURK. Values from Table 12, Table 13, and Figure 1 of the paper."
+    }
+    </script>
+  </pc-compare>
+
+  <p class="pc-fade-in">
+    The epoch-by-epoch trajectory (Figure 1b in the paper) reinforces the point: over six training epochs on NL-RX-SYNTH and NL-RX-TURK, the baseline peaks early and degrades, while LLM-JEPA reaches <strong>70.4 → 70.9 → 71.8 %</strong> on SYNTH across the final epochs.
+    Overfitting resistance is not a side effect — it is a direct consequence of the JEPA term regularizing the representation space, as the structured embedding analysis in §4.2 confirms.
+  </p>
+
+</div>

@@ -1,0 +1,22 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-eyebrow pc-fade-in">§3.3 · Diagnostic</div>
+  <div class="pc-source" data-page="4">pp. 4–5</div>
+
+  <p class="pc-fade-in">Before scaling to many models and datasets, one sanity check is essential: does standard next-token prediction already minimise the JEPA alignment term as a side effect? If it did, adding an explicit JEPA loss would be redundant. The answer, tested on Llama-3.2-1B-Instruct with NL-RX-SYNTH, is a clear <strong>no</strong>.</p>
+
+  <p class="pc-fade-in">Two controlled runs share identical architecture and data. The first trains with the standard cross-entropy loss <code>L_LLM</code> while monitoring — but <em>not</em> back-propagating — the JEPA prediction error <code>d(Pred(Enc(Text)), Enc(Code))</code>. That monitored signal stays flat: NTP optimisation never pressures the encoder to align Text and Code embeddings. The second run adds the JEPA gradient. Now <code>d(·,·)</code> falls steadily — and the cross-entropy curve of the two runs is indistinguishable. The NTP objective is completely unaffected by the extra term.</p>
+
+  <figure class="pc-figure pc-figure--zoom pc-rise">
+    <img src="figures/img-005-006.png" alt="Top 100 singular values of Enc(Text) minus Enc(Code) for four model variants, showing LLM-JEPA curves orders of magnitude lower than baseline and NTP fine-tune.">
+    <figcaption>Top 100 singular values of <code>Enc(Text) − Enc(Code)</code>. LLM-JEPA collapses the gap by orders of magnitude; the base model and NTP fine-tuning do not — the Text→Code mapping concentrates in a narrow subspace only under the JEPA objective.</figcaption>
+  </figure>
+
+  <p class="pc-fade-in">The singular-value spectrum makes the geometry legible. For the base model and the NTP fine-tune, the top singular values of <code>Enc(Text) − Enc(Code)</code> remain in the hundreds — the mapping from Text to Code embeddings sprawls across a high-dimensional subspace. Under LLM-JEPA the same spectrum drops one to two orders of magnitude: the mapping is confined to a narrow subspace, which is precisely the structure the JEPA objective imposes. This mirrors what was observed for vision autoencoders <pc-cite key="balestriero2024"></pc-cite> — reconstruction-based training leaves perceptual structure underspecified, while embedding-space objectives compress it into something geometrically tight.</p>
+
+  <p class="pc-fade-in">The accuracy gap makes the downstream consequence concrete: <strong>51.95%</strong> for NTP versus <strong>71.10%</strong> for LLM-JEPA on NL-RX-SYNTH — a gain of nearly twenty points purchased entirely in the geometry of the latent space, not in any change to next-token behaviour.</p>
+
+  <aside class="pc-callout">
+    <div class="pc-callout-title">Takeaway</div>
+    NTP and JEPA optimise orthogonal objectives: NTP never shrinks the embedding-alignment gap on its own, yet adding the JEPA term leaves the NTP loss curve unchanged. Every accuracy gain comes from latent-space geometry, not tokenwise prediction.
+  </aside>
+</div>
