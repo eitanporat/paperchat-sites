@@ -1,0 +1,65 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-eyebrow pc-fade-in">§B.7 + §5 · Activations &amp; Conclusion</div>
+  <div class="pc-source" data-page="12">pp. 12–13, 5–6</div>
+
+  <p class="pc-fade-in">
+    Theorem 3.2's forward-pass condition is stated in terms of the <em>moments of adapter outputs</em> — so an
+    honest validation should check whether those moments actually diverge under LoRA and stabilise under rsLoRA.
+    Post-adapter, pre-<pc-term def="Layer Normalisation: rescales each token's hidden vector to zero mean and unit variance, which can mask changes in the raw activation magnitude.">LayerNorm</pc-term>
+    activations were recorded across all adapters and averaged over layers throughout training.
+    Both methods produce moments that are small and qualitatively benign — the mean stays near zero, the second
+    raw moment grows gently and stays well below <code>0.0003</code>.
+  </p>
+
+  <figure class="pc-figure pc-figure--zoom pc-rise">
+    <img src="figures/fig9-activations.png" alt="Average activation first and second moments over training for LoRA and rsLoRA across ranks 4–2048">
+    <figcaption>Figure 9 — average activation first and second moments across training. Both LoRA and rsLoRA stay benign and small in magnitude, likely owing to LayerNorm and the per-adapter averaging. The visible difference: rsLoRA's high-rank curves (512, 2048) level off later in training — a possible mechanism for why higher rank actually helps once γ<sub>r</sub> is corrected.</figcaption>
+  </figure>
+
+  <p class="pc-fade-in">
+    Why don't the activations separate the two methods the way gradient norms do? Two structural features conspire
+    to hide the effect. LayerNorm immediately follows each adapter, re-centring and rescaling whatever the adapter
+    produces — a layer that actively suppresses moment growth. Averaging all adapters together then further smooths
+    any rank-dependent signal. The gradient norm escapes both of these averaging operations and is therefore the
+    cleaner diagnostic. One difference does survive: with rsLoRA the high-rank curves (r = 512, 2048) level off
+    considerably later for <em>both</em> moments, suggesting that rank-stabilised adapters continue updating their
+    feature directions deep into training — a plausible mechanism for the perplexity improvements that high rsLoRA
+    ranks unlock.
+  </p>
+
+  <aside class="pc-callout pc-fade-in">
+    <div class="pc-callout-title">The one-line patch</div>
+    Replace <code>γ<sub>r</sub> = α / r</code> with <code>γ<sub>r</sub> = α / √r</code>.
+    That single symbol change stabilises gradients across all ranks, turns rank into a real
+    compute-versus-quality dial, and costs nothing at inference — after fine-tuning, <code>γ<sub>r</sub>BA</code>
+    is folded into <code>W</code> to produce a single matrix, identical in shape and latency to the base model.
+  </aside>
+
+  <p class="pc-fade-in">
+    A natural extension is <pc-term def="AdaLoRA: allocates rank budget dynamically during training by parameterising adapters as approximate SVDs and pruning singular values by importance score.">AdaLoRA</pc-term> <pc-cite key="zhang2023adalora"></pc-cite>,
+    which dynamically redistributes rank across adapters during training. Because adapters in AdaLoRA are free to
+    reach full rank, the collapse that 1/r induces at large rank is especially harmful there — individual adapters
+    can be assigned high rank precisely at moments when the scaling factor most suppresses their gradients.
+    Replacing AdaLoRA's <code>γ<sub>r</sub> = α/r</code> with <code>α/√r</code> is conjectured to recover that
+    lost capacity, with the largest gains expected when the rank budget is generous.
+  </p>
+
+  <p class="pc-fade-in">
+    A subtler consequence concerns how to read the original LoRA result <pc-cite key="hu2022"></pc-cite> that
+    "very low ranks suffice." That conclusion rested on experiments where rank 64 showed no improvement over
+    rank 4 — but under a <code>1/r</code> scaling, rank 64 gradients are four times smaller at initialisation.
+    The flatness was a measurement artefact of gradient collapse, not evidence about the
+    <em>intrinsic dimensionality</em> of the fine-tuning manifold
+    <pc-cite key="aghajanyan2020"></pc-cite><pc-cite key="li2018"></pc-cite>.
+    With rsLoRA's corrected scaling, the relationship between rank and fine-tuning performance becomes
+    monotone, and the question of how much intrinsic dimension a given task actually requires is genuinely
+    open again — worth revisiting across diverse tasks and model families.
+  </p>
+
+  <aside class="pc-callout pc-callout--alt pc-fade-in">
+    <div class="pc-callout-title">Takeaway</div>
+    Change one symbol: <strong>r &rarr; &radic;r</strong> in the denominator of &gamma;<sub>r</sub>. The resulting
+    rsLoRA method keeps gradients stable at any rank, transforms rank from a fixed low-value constant into a true
+    compute/quality trade-off knob, and leaves inference cost unchanged.
+  </aside>
+</div>

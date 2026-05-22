@@ -1,0 +1,1040 @@
+/* Chapter-site primitives. Styled after evjang.com/autogo:
+   warm cream paper, Fraunces serif at weight 400, JetBrains Mono eyebrows,
+   dual OKLCH accents (blue/net + orange/search).
+
+   Generated pages must compose with these classes — no .card. Vocabulary:
+     .pc-prose            prose container (typography baseline)
+     .pc-eyebrow          mono uppercase label (used for section eyebrows,
+                          figure labels, callout titles, skip reasons)
+     .pc-figure           figure block (image + caption)
+     .pc-figure--zoom     opt-in to click-to-enlarge
+     .pc-fig-interactive  host element for JS/SVG figures
+     .pc-callout          aside / definition / note
+     .pc-callout--alt     orange accent variant (use sparingly)
+     .pc-skip             collapsible low-importance block
+     .pc-nav              chapter table of contents (in-site nav)
+     .pc-page             a single concept page wrapper
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+/* Agent compatibility shim — section-writers frequently emit invalid
+   SVG like `<rect fill="var(--accent-soft)" />`. SVG presentation
+   attributes don't parse `var(...)`, so without this they'd render as
+   solid black. CSS attribute selectors match the literal attribute
+   string, and CSS — unlike SVG attrs — DOES resolve var(). The brief
+   tells agents to use `style="..."` instead, but this safety net keeps
+   chapters from looking broken when they slip up. */
+svg [fill="var(--accent)"]      { fill: var(--accent); }
+svg [fill="var(--accent-alt)"]  { fill: var(--accent-alt); }
+svg [fill="var(--accent-soft)"] { fill: var(--accent-soft); }
+svg [fill="var(--ink)"]         { fill: var(--ink); }
+svg [fill="var(--ink-soft)"]    { fill: var(--ink-soft); }
+svg [fill="var(--paper)"]       { fill: var(--paper); }
+svg [fill="var(--border)"]      { fill: var(--border); }
+svg [fill="var(--bg)"]          { fill: var(--bg); }
+svg [stroke="var(--accent)"]      { stroke: var(--accent); }
+svg [stroke="var(--accent-alt)"]  { stroke: var(--accent-alt); }
+svg [stroke="var(--accent-soft)"] { stroke: var(--accent-soft); }
+svg [stroke="var(--ink)"]         { stroke: var(--ink); }
+svg [stroke="var(--ink-soft)"]    { stroke: var(--ink-soft); }
+svg [stroke="var(--paper)"]       { stroke: var(--paper); }
+svg [stroke="var(--border)"]      { stroke: var(--border); }
+svg [stroke="var(--bg)"]          { stroke: var(--bg); }
+svg [font-family="var(--mono)"]   { font-family: var(--mono); }
+svg [font-family="var(--serif)"]  { font-family: var(--serif); }
+svg [font-family="var(--sans)"]   { font-family: var(--sans); }
+
+:root {
+  --bg: #f6f1e7;
+  --bg-soft: #eee6d4;
+  --paper: #fbf6ea;
+  --ink: #1f1a14;
+  --ink-soft: #6a5d4a;
+  --border: #d9cdb0;
+  /* Dual accent palette: blue for primary callouts / nav, orange for
+     contrasts ("alt" callouts, interactive figures, warnings). */
+  --accent: oklch(58% 0.12 245);
+  --accent-soft: oklch(92% 0.04 245);
+  --accent-alt: oklch(55% 0.16 35);
+  --accent-alt-soft: oklch(95% 0.04 35);
+
+  --serif: 'Fraunces', Georgia, "Iowan Old Style", serif;
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 17px/1.65 var(--serif);
+  font-variation-settings: "opsz" 14;
+}
+
+/* Body gets the sidebar gutter so prose can re-center via auto margins
+   instead of being pinned to the left edge of the post-sidebar area. */
+body { padding-left: 200px; }
+@media (max-width: 800px) {
+  body { padding-left: 0; }
+}
+/* Centered prose column — paperchat's classic layout. Figures can
+   ESCAPE the column via utility classes (.l-body-outset, .l-page,
+   .l-screen) using the margin-left:50%; transform:translateX(-50%)
+   centering trick that always re-centers on the viewport regardless
+   of parent width. */
+.pc-page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px 32px 56px;
+  /* Don't let overflowing wide-lane figures push the parent's bounding
+     box. The wide figures themselves use position: relative so they
+     can paint outside, but the parent's flow stays sane. */
+  overflow: visible;
+}
+
+/* Layout utility classes — apply to any element inside .pc-page or
+   .pc-prose to escape the centered text column. */
+.l-body, .l-text { /* default flow — sits in the prose column */ }
+.l-body-outset {
+  /* Slightly wider than text — eats 16px of .pc-page's padding each
+     side. Collapses back on narrow screens. */
+  margin-left: -16px;
+  margin-right: -16px;
+}
+/* Layout classes don't escape the prose column anymore — figures
+   FIT THE PAGE. Width 100% of the parent, no overhang. Avoids the
+   "centered figure drifts right on wide viewports" bug entirely. */
+.l-page {
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+}
+.l-screen {
+  /* Same as l-page for now — no full-bleed escape. If you need
+     full-viewport bleed later, build a separate top-level element
+     outside .pc-page. */
+  width: 100%;
+  max-width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* Every pc-* custom element must be display: block for layout-class
+   widths to compute correctly (custom elements are inline by default,
+   which means width:100% doesn't kick in, which breaks the .l-page
+   centering math when the element is itself a parent of an l-page
+   figure). */
+pc-chain, pc-stepped, pc-timeline, pc-grid, pc-toggle, pc-slider,
+pc-plot, pc-annotated, pc-equation, pc-tree, pc-term, pc-anki,
+pc-3d, pc-table, pc-compare, pc-pseudocode, pc-header, pc-cite,
+pc-bibliography {
+  display: block;
+}
+/* pc-cite is the one exception — it renders an inline superscript. */
+pc-cite { display: inline; }
+.l-gutter {
+  /* Inline italic muted aside. (A true right-margin sidenote layout
+     needs more page-level chrome than paperchat has — kept inline for
+     simplicity and so it never overflows.) */
+  display: block;
+  margin: 0.5em 0;
+  padding-left: 1em;
+  border-left: 2px solid var(--border);
+  font-family: var(--serif);
+  font-size: 13px;
+  line-height: 1.55em;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+@media (max-width: 600px) {
+  .l-body-outset { margin-left: 0; margin-right: 0; }
+}
+
+/* --- Eyebrow utility ------------------------------------------------ */
+/* The autogo signature: mono uppercase label used above sections and
+   inside callouts/skip blocks. */
+.pc-eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+/* Source-page citation for each section. Same monospace family as
+   eyebrows but smaller and dimmer — reads as a citation. Clickable:
+   when the chapter site is loaded inside paperchat, clicking jumps
+   the underlying PDF viewer to that page and closes the chapter
+   overlay. The pc.js click handler dispatches a postMessage. */
+.pc-source {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted, var(--ink-soft));
+  opacity: 0.75;
+  margin-top: -0.15rem;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  padding: 2px 6px;
+  border-radius: 3px;
+  transition: opacity 0.12s ease, background 0.12s ease;
+}
+.pc-source::before { content: "↳ "; opacity: 0.6; }
+.pc-source:hover {
+  opacity: 1;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.pc-source:hover::after {
+  content: " — open in PDF";
+  opacity: 0.7;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
+/* --- pc-anki: Anki-style review-card deck ------------------------- */
+.pc-anki { margin: 0.9em 0; }
+.pc-anki-deck { margin: 1.4em 0 0.9em; }
+.pc-anki-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; margin-bottom: .5rem;
+}
+.pc-anki-toggle {
+  appearance: none; border: 0; background: transparent; cursor: pointer;
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--accent);
+  padding: 4px 8px; border-radius: 3px;
+}
+.pc-anki-toggle:hover { background: var(--accent-soft); }
+.pc-anki-list {
+  list-style: none; margin: 0; padding: 0;
+  border-top: 1px solid var(--border);
+}
+.pc-anki-card {
+  border-bottom: 1px solid var(--border);
+}
+.pc-anki-q {
+  appearance: none; width: 100%; cursor: pointer;
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 14px 10px; text-align: left;
+  background: transparent; border: 0;
+  font: inherit; color: var(--ink);
+  line-height: 1.45;
+  transition: background 0.12s ease;
+}
+.pc-anki-q:hover { background: var(--accent-soft); }
+.pc-anki-num {
+  font-family: var(--mono); font-size: 11px; font-weight: 500;
+  color: var(--muted); flex: 0 0 28px; padding-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.pc-anki-q-text { flex: 1; }
+.pc-anki-chev {
+  flex: 0 0 16px; color: var(--accent); font-size: 12px;
+  transition: transform 0.18s ease; padding-top: 2px;
+}
+.pc-anki-open .pc-anki-chev { transform: rotate(90deg); }
+.pc-anki-a {
+  padding: 0 10px 14px 52px;  /* aligned with the question text (gap+num) */
+}
+.pc-anki-a-inner {
+  border-left: 2px solid var(--accent);
+  padding: 4px 14px;
+  color: var(--ink-soft);
+  font-size: 15px;
+  line-height: 1.55;
+}
+.pc-anki-a-inner p:first-child { margin-top: 0; }
+.pc-anki-a-inner p:last-child  { margin-bottom: 0; }
+
+/* --- pc-term: inline term with hover/focus tooltip ---------------- */
+.pc-term {
+  position: relative;
+  display: inline;
+  cursor: help;
+  outline: none;
+}
+.pc-term-trigger {
+  border-bottom: 1px dashed var(--accent);
+  padding-bottom: 1px;
+}
+.pc-term:hover .pc-term-trigger,
+.pc-term:focus .pc-term-trigger,
+.pc-term.pc-term-open .pc-term-trigger {
+  background: var(--accent-soft);
+}
+/* Tooltip is rendered as a popover so it always paints in the browser's
+   top layer, escaping any ancestor stacking context created by
+   pc-rise / pc-fade-in transforms. JS positions it relative to the trigger. */
+.pc-term-tip {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  border: 0;
+  width: max-content;
+  max-width: min(360px, 80vw);
+  padding: 10px 12px;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--serif);
+  font-size: 13px;
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-transform: none;
+  border-radius: 4px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+  white-space: normal;
+  overflow: visible;
+}
+.pc-term-tip:not(:popover-open) { display: none; }
+.pc-term-tip::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: -5px;
+  width: 10px; height: 10px;
+  background: var(--ink);
+  transform: rotate(45deg);
+}
+
+/* --- Prose ---------------------------------------------------------- */
+.pc-prose h1,
+.pc-prose h2,
+.pc-prose h3 {
+  font-family: var(--serif);
+  font-weight: 400;
+  letter-spacing: -0.012em;
+  font-variation-settings: "opsz" 96;
+  color: var(--ink);
+}
+/* Distill heading rhythm — h2 with hairline rule beneath, h3 a touch
+   heavier than body weight to register without screaming, h4 as the
+   mono tracked all-caps label (used inside long sections for sub-
+   subsections). */
+.pc-prose h1 { font-size: 2.4rem; line-height: 1.15; margin: 0 0 0.4em; }
+.pc-prose h2 {
+  font-size: 1.55rem;
+  line-height: 1.2;
+  margin: 1.6em 0 0.6em;
+  padding-bottom: 0.45em;
+  border-bottom: 1px solid var(--border);
+  font-weight: 400;
+}
+.pc-prose h3 {
+  font-size: 1.15rem;
+  line-height: 1.3;
+  margin: 1.2em 0 0.3em;
+  color: var(--ink);
+  font-family: var(--serif);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.pc-prose h4 {
+  font-size: 0.75rem;
+  line-height: 1.3;
+  margin: 1.2em 0 0.4em;
+  color: var(--ink-soft);
+  font-family: var(--mono);
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.pc-prose p  { margin: 0 0 1em; }
+.pc-prose em { font-style: italic; }
+.pc-prose strong { font-weight: 600; }
+.pc-prose a  {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+.pc-prose a:hover { text-decoration-color: var(--accent); }
+.pc-prose code {
+  font: 0.9em/1.4 var(--mono);
+  background: var(--bg-soft);
+  padding: 0.05em 0.4em;
+  border-radius: 3px;
+  color: var(--ink);
+}
+.pc-prose pre {
+  background: #ffffff;
+  color: #000000;
+  padding: 14px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  overflow-x: auto;
+  font: 0.88em/1.55 var(--mono);
+}
+.pc-prose pre code { background: none; color: inherit; padding: 0; }
+.pc-prose blockquote {
+  margin: 1em 0;
+  padding: 0.1em 0 0.1em 16px;
+  border-left: 2px solid var(--accent);
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+/* sub/sup compressed like autogo */
+.pc-prose sub, .pc-prose sup { font-size: 0.7em; }
+
+/* --- Figures -------------------------------------------------------- */
+.pc-figure {
+  /* Use long-hand margins so the .l-page / .l-screen layout classes
+     can override margin-left without being clobbered by a shorthand
+     that comes later in the cascade. */
+  margin-top: 1.1em;
+  margin-bottom: 1.1em;
+  text-align: left;
+}
+.pc-figure img,
+.pc-figure svg,
+.pc-figure canvas,
+.pc-page figure > img,
+.pc-page figure > svg,
+.pc-page figure > canvas,
+.pc-prose figure > img,
+.pc-prose figure > svg,
+.pc-prose figure > canvas {
+  /* Always fit the page column — embedded paper figures arrive at all
+     sorts of native widths (tiny inset, double-column wide, etc.).
+     Force them to the full column width so every figure occupies the
+     same visual rail; the aspect ratio is preserved by height: auto.
+     The broader `.pc-page figure > img` selectors catch writer-emitted
+     <figure> elements that omit the `.pc-figure` class. */
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  display: block;
+  margin: 0 auto;
+}
+/* Inner SVGs and canvases inside any interactive figure should also
+   never exceed the figure's own width — covers writer-built custom
+   figures where the SVG was authored with a fixed viewBox / max-width
+   that's wider than the column. */
+.pc-fig-interactive svg,
+.pc-fig-interactive canvas,
+.pc-fig-interactive img {
+  max-width: 100%;
+  height: auto;
+}
+/* Unified caption style — applies to:
+   - <figure class="pc-figure"><figcaption> (raster figures)
+   - <figcaption class="pc-cap"> (inside any pc-* component)
+   Distill convention: caption BELOW the figure, serif body text,
+   muted ink, left-aligned, with a bold "Figure N." / title lead-in
+   in --ink so the eye finds it. */
+.pc-figure figcaption,
+.pc-fig-interactive figcaption,
+.pc-cap {
+  /* Center the caption BLOCK under a centered image while keeping its
+     text left-aligned (reads better than centered prose). The 60ch
+     cap keeps long captions from spanning a wide .l-page figure. */
+  margin: 0.8em auto 0;
+  font-family: var(--serif);
+  font-size: 0.85rem;
+  line-height: 1.55em;
+  letter-spacing: 0;
+  color: var(--ink-soft);
+  text-align: left;
+  max-width: 60ch;
+  display: block;
+}
+.pc-figure figcaption strong,
+.pc-fig-interactive figcaption strong,
+.pc-cap strong {
+  color: var(--ink);
+  font-weight: 600;
+  margin-right: 0.3em;
+}
+
+/* Appendix block — muted, demoted body that sits below the main
+   article. Used for acknowledgements, citations, bibliography, etc.
+   Thin hairline above mirrors the distill-byline rule. */
+.pc-appendix {
+  margin-top: 4rem;
+  padding-top: 1.6rem;
+  border-top: 1px solid var(--border);
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  line-height: 1.65em;
+}
+.pc-appendix h3 {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin: 1.6rem 0 0.6rem;
+}
+.pc-appendix p { margin: 0 0 0.8em; }
+.pc-appendix a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid var(--border);
+}
+.pc-appendix a:hover { border-bottom-color: var(--accent); }
+.pc-figure--zoom img { cursor: zoom-in; }
+
+.pc-fig-interactive {
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 12px;
+  /* Long-hand so layout classes (.l-page, .l-screen) can override
+     margin-left without being clobbered by a shorthand later in the
+     cascade. */
+  margin-top: 1.1em;
+  margin-bottom: 1.1em;
+}
+
+/* --- pc-pseudocode layout ------------------------------------------- */
+/* The figure wraps tight around the code; the BODY scrolls horizontally
+   when a single line overflows the column instead of pushing the figure
+   wide. Each line is a flex row with a fixed gutter for the line
+   number and a flex-grow code span. The code span uses `white-space:
+   pre` to preserve indentation, and `min-width: 0` so the parent flex
+   row doesn't expand past the figure on long lines. */
+.pc-pseudocode-fig {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: .8rem 1rem;
+  overflow: hidden;
+}
+.pc-pc-title {
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: .1rem;
+}
+.pc-pc-lang {
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+  margin-bottom: 1rem;
+}
+.pc-pc-body {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: #000000;
+  overflow-x: auto;       /* long lines scroll WITHIN the figure */
+}
+.pc-pc-line {
+  display: flex;
+  gap: .6rem;
+  align-items: baseline;
+  line-height: 1.55;
+}
+.pc-pc-num {
+  flex: 0 0 24px;
+  text-align: right;
+  color: var(--ink-soft);
+  font-size: 11px;
+  user-select: none;
+}
+.pc-pc-line > code.pc-code {
+  flex: 1 1 auto;
+  min-width: 0;           /* let the row stay inside the parent */
+  white-space: pre;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+}
+
+/* --- Prism line-numbers plugin (raw-code form) -----------------------
+   We don't load Prism's bundled stylesheet — these rules reproduce the
+   plugin's layout (gutter via absolute-positioned <span> CSS counters)
+   in our white-on-white palette. */
+pre.line-numbers.pc-code-block {
+  position: relative;
+  padding-left: 3.4em;
+  counter-reset: linenumber;
+}
+pre.line-numbers.pc-code-block > code {
+  position: relative;
+  white-space: inherit;
+}
+.line-numbers-rows {
+  position: absolute;
+  pointer-events: none;
+  top: 14px;              /* matches .pc-code-block padding */
+  left: 0;
+  width: 2.6em;
+  letter-spacing: -1px;
+  border-right: 1px solid var(--border);
+  user-select: none;
+  font-size: 100%;
+  line-height: inherit;
+}
+.line-numbers-rows > span {
+  display: block;
+  counter-increment: linenumber;
+  pointer-events: none;
+}
+.line-numbers-rows > span:before {
+  content: counter(linenumber);
+  color: var(--ink-soft);
+  display: block;
+  padding-right: 0.6em;
+  text-align: right;
+}
+
+/* --- Prism syntax highlighting (pc-pseudocode code form) ------------ */
+/* paperchat-palette token theme: blue --accent for keywords, orange
+   --accent-alt for strings + numbers, --ink-soft for comments. Stays
+   inside the cream-paper aesthetic; no Prism default rainbow. */
+.pc-prose pre.pc-code-block,
+.pc-fig-interactive pre.pc-code-block,
+pre.pc-code-block {
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px 16px;
+}
+.pc-prose pre.pc-code-block code,
+.pc-fig-interactive pre.pc-code-block code,
+pre.pc-code-block code.pc-code {
+  font: inherit; color: #000000; background: transparent; padding: 0;
+}
+/* GitHub-light palette on white bg: well-tested, calm, high contrast.
+   keywords red, strings dark-blue, numbers/builtins blue,
+   functions purple, comments muted gray. */
+.pc-code .token.comment,
+.pc-code .token.prolog,
+.pc-code .token.doctype,
+.pc-code .token.cdata        { color: #6a737d; font-style: italic; }
+.pc-code .token.punctuation  { color: #24292e; }
+.pc-code .token.namespace    { opacity: 0.7; }
+.pc-code .token.property,
+.pc-code .token.tag,
+.pc-code .token.constant,
+.pc-code .token.symbol,
+.pc-code .token.deleted      { color: #005cc5; }
+.pc-code .token.boolean,
+.pc-code .token.number       { color: #005cc5; }
+.pc-code .token.string,
+.pc-code .token.char,
+.pc-code .token.attr-value,
+.pc-code .token.inserted     { color: #032f62; }
+.pc-code .token.operator,
+.pc-code .token.entity,
+.pc-code .token.url,
+.pc-code .token.variable     { color: #24292e; }
+.pc-code .token.atrule,
+.pc-code .token.attr-name,
+.pc-code .token.keyword      { color: #d73a49; font-weight: 600; }
+.pc-code .token.function,
+.pc-code .token.class-name   { color: #6f42c1; }
+.pc-code .token.regex,
+.pc-code .token.important    { color: #e36209; }
+.pc-code .token.important,
+.pc-code .token.bold         { font-weight: 700; }
+.pc-code .token.italic       { font-style: italic; }
+.pc-code .token.entity       { cursor: help; }
+.pc-code .token.builtin      { color: #005cc5; }
+.pc-code .token.decorator    { color: #6f42c1; }
+
+/* --- Distill-style hero (pc-header) ---------------------------------- */
+/* Structure adapted from distill.pub article headers (large serif title,
+   oversized one-sentence dek, 4-column byline grid bracketed by hairline
+   rules, optional hero figure). Typography uses paperchat's own
+   Fraunces + JetBrains Mono tokens so it lives inside the cream-paper
+   aesthetic rather than distill's pure-white look. */
+/* The hero scales fluidly: title shrinks with clamp(), dek tightens,
+   byline collapses from 4 → 2 → 1 column as the viewport narrows. No
+   horizontal overflow at any width. */
+.pc-hero {
+  margin: 2.5em 0 3em;
+}
+@media (min-width: 900px) {
+  .pc-hero { margin-top: 4em; }
+}
+.pc-hero-title {
+  font-family: var(--serif);
+  font-weight: 400;
+  /* min 26px (small phones) → up to 50px (≥900px viewport). */
+  font-size: clamp(1.625rem, 4.2vw + 0.5rem, 3.125rem);
+  line-height: 1.08em;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.4em;
+  color: var(--ink);
+  /* Long titles must wrap rather than overflow. */
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+.pc-hero-dek {
+  font-family: var(--serif);
+  font-weight: 400;
+  /* 1.05rem on phones → 1.45rem on desktop. */
+  font-size: clamp(1.05rem, 0.9rem + 0.6vw, 1.45rem);
+  line-height: 1.45em;
+  color: var(--ink);
+  margin: 0 0 1.6rem;
+  max-width: 42ch;
+}
+.pc-hero-byline {
+  display: grid;
+  /* 4 cols on wide; 2 on tablet; 1 on phone — controlled by auto-fit
+     with a sane min track width so columns never get crushed. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  gap: 1rem 1.5rem;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 1.2rem 0;
+  font-size: 0.9rem;
+  line-height: 1.55em;
+}
+.pc-hero-col h3 {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin: 0 0 0.5em;
+}
+.pc-hero-col p {
+  margin: 0 0 0.15em;
+  color: var(--ink);
+  /* DOI / URL strings can be long — let them wrap rather than push the
+     column wider. */
+  overflow-wrap: anywhere;
+}
+.pc-hero-author {
+  font-family: var(--serif);
+  font-weight: 500;
+}
+.pc-hero-aff {
+  font-family: var(--serif);
+  color: var(--ink-soft);
+  font-size: 0.95em;
+}
+.pc-hero-col a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.pc-hero-col a:hover { border-bottom-color: var(--accent); }
+.pc-hero-fig {
+  margin: 1.6rem 0 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+.pc-hero-fig figcaption {
+  margin-top: 0.7em;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+}
+/* On very narrow viewports, tighten the dek max-width and pull the
+   byline gap in. */
+@media (max-width: 520px) {
+  .pc-hero { margin: 1.6em 0 2em; }
+  .pc-hero-dek { max-width: none; margin-bottom: 1.2rem; }
+  .pc-hero-byline { gap: 0.9rem 1rem; padding: 1rem 0; }
+}
+
+/* --- Callouts ------------------------------------------------------- */
+.pc-callout {
+  margin: 0.9em 0;
+  padding: 10px 14px;
+  background: var(--accent-soft);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 4px 4px 0;
+}
+.pc-callout > :first-child { margin-top: 0; }
+.pc-callout > :last-child  { margin-bottom: 0; }
+.pc-callout-title {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--accent);
+  margin-bottom: 0.4em;
+}
+.pc-callout--alt {
+  background: var(--accent-alt-soft);
+  border-left-color: var(--accent-alt);
+}
+.pc-callout--alt .pc-callout-title { color: var(--accent-alt); }
+
+/* --- Skip blocks ---------------------------------------------------- */
+.pc-skip {
+  margin: 0.9em 0;
+  padding: 6px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink-soft);
+}
+.pc-skip > summary {
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--ink-soft);
+  list-style: none;
+  padding: 4px 0;
+}
+.pc-skip > summary::before {
+  content: "▸ ";
+  color: var(--accent);
+}
+.pc-skip[open] > summary::before { content: "▾ "; }
+.pc-skip[open] {
+  background: var(--paper);
+  color: var(--ink);
+  padding-bottom: 12px;
+}
+.pc-skip-reason {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-right: 0.5em;
+}
+body.pc-skip-hide .pc-skip { display: none; }
+
+/* --- Left-side sticky section nav (autogo SectionSidebar idiom) ------
+   The chapter site is infinite-scroll: all .pc-page sections stacked
+   vertically. This nav is a fixed strip on the left that auto-highlights
+   the active section as the user scrolls. */
+.pc-nav {
+  position: fixed;
+  left: 16px;
+  top: 24px;
+  bottom: 24px;
+  width: 168px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-soft);
+  z-index: 10;
+  overflow-y: auto;
+}
+@media (max-width: 800px) {
+  .pc-nav { position: static; flex-direction: row; flex-wrap: wrap; width: auto; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+}
+
+.pc-nav .pc-nav-title {
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--ink-soft);
+  padding: 4px 8px 8px;
+  border-bottom: 1px dotted var(--border);
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pc-nav .pc-nav-pages { display: flex; flex-direction: column; gap: 2px; }
+.pc-nav a {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  text-decoration: none;
+  padding: 4px 8px;
+  border-left: 2px solid transparent;
+  border-radius: 0;
+  opacity: 0.6;
+  transition: all 70ms ease-out;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pc-nav a:hover { background: rgba(31, 26, 20, 0.06); opacity: 1; }
+.pc-nav a.pc-done    { opacity: 0.5; }
+.pc-nav a[aria-current="page"] {
+  background: var(--ink);
+  color: var(--bg);
+  opacity: 1;
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+.pc-nav .pc-skip-toggle {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  border: 1px solid var(--border);
+  background: transparent;
+  padding: 5px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--ink-soft);
+  align-self: flex-start;
+  margin-top: 8px;
+}
+.pc-nav .pc-skip-toggle:hover { background: rgba(31, 26, 20, 0.06); color: var(--ink); }
+
+/* Each section gets a top margin so scrollIntoView places it nicely
+   below the optional fixed-top spacing (we don't have a top bar but a
+   little breathing room helps when jumping). */
+section.pc-page { scroll-margin-top: 24px; min-height: 60vh; }
+.pc-nav .pc-skip-toggle[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+/* --- Anchored headings --------------------------------------------- */
+.pc-prose h2,
+.pc-prose h3 { position: relative; }
+.pc-anchor {
+  position: absolute;
+  left: -22px;
+  top: 0.1em;
+  opacity: 0;
+  transition: opacity 0.1s;
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-weight: normal;
+}
+.pc-prose h2:hover .pc-anchor,
+.pc-prose h3:hover .pc-anchor { opacity: 1; }
+
+/* --- Zoom lightbox ------------------------------------------------- */
+.pc-zoom-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 8, 4, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  cursor: zoom-out;
+}
+.pc-zoom-overlay img {
+  max-width: 95vw;
+  max-height: 95vh;
+  background: var(--paper);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* KaTeX defense-in-depth */
+.katex .katex-mathml {
+  position: absolute !important;
+  clip: rect(1px, 1px, 1px, 1px) !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+}
+.katex-display { overflow-x: auto; overflow-y: hidden; }
+
+/* Visible focus indicator (autogo-style). */
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+:focus:not(:focus-visible) { outline: none; }
+
+/* --- Animation primitives (autogo-style) ---------------------------- */
+/* Defaults: 70ms ease-out (autogo's transition baseline). Entrance
+   animations are subtle — small Y shift + opacity. Honor reduced-motion. */
+
+@keyframes pcFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pcRise {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pcDrawIn {
+  to { stroke-dashoffset: 0; }
+}
+
+/* Apply to any element to fade-up when it enters the viewport (wired by
+   pc.js IntersectionObserver). Initial state is transparent; the
+   .pc-revealed class flipped by pc.js plays the animation. */
+.pc-fade-in {
+  opacity: 0;
+  transform: translateY(8px);
+  will-change: opacity, transform;
+}
+.pc-fade-in.pc-revealed {
+  animation: pcFadeIn 180ms cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+.pc-rise {
+  opacity: 0;
+  transform: translateY(16px);
+  will-change: opacity, transform;
+}
+.pc-rise.pc-revealed {
+  animation: pcRise 240ms cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+
+/* Stagger children: each child gets a sequential delay (40ms steps).
+   Up to 16 children — autogo never needs more in one batch. */
+.pc-stagger > .pc-fade-in,
+.pc-stagger > .pc-rise {
+  animation-delay: calc(var(--pc-i, 0) * 40ms);
+}
+
+/* SVG path that draws itself in: pc.js measures path length and sets
+   stroke-dasharray; the .pc-revealed class plays pcDrawIn. */
+.pc-draw {
+  stroke-dasharray: var(--pc-len, 1000);
+  stroke-dashoffset: var(--pc-len, 1000);
+}
+.pc-draw.pc-revealed {
+  animation: pcDrawIn 600ms cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+
+/* Page transitions (hash-routed): fade-out the leaving page, fade-up the
+   entering one. Default transition is autogo's 140ms baseline. */
+section.pc-page {
+  transition: opacity 70ms ease-out;
+}
+section.pc-page.pc-leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+section.pc-page.pc-entering {
+  animation: pcFadeIn 160ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* Smooth color / state transitions on interactive bits. */
+.pc-callout, .pc-figure, .pc-fig-interactive, .pc-skip,
+.pc-nav a, .pc-nav .pc-skip-toggle {
+  transition: background 70ms ease-out, color 70ms ease-out, border-color 70ms ease-out;
+}
+
+/* Reduced-motion: kill everything, snap to final state. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .pc-fade-in, .pc-rise { opacity: 1; transform: none; }
+  .pc-draw { stroke-dashoffset: 0 !important; }
+}

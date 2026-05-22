@@ -1,0 +1,76 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-eyebrow pc-fade-in">§3 · rsLoRA: rank-stabilized adapters</div>
+  <div class="pc-source" data-page="3">pp. 3–4, Appendix A</div>
+
+  <p class="pc-fade-in">What should $\gamma_r$ actually do? Scaling the product $BA$ by a rank-dependent constant affects every gradient that passes through the adapter. Too small a $\gamma_r$ and the adapter vanishes into the noise; too large and the forward activations — and backward gradients — blow up. <strong>The only safe zone is one where both directions stay bounded as $r \to \infty$.</strong> That requirement pins down $\gamma_r$ to a single asymptotic class.</p>
+
+  <aside class="pc-callout pc-fade-in">
+    <div class="pc-callout-title">Definition 3.1 — rank-stabilized adapter</div>
+    An adapter $\gamma_r BA$ is <em>rank-stabilized</em> if both of the following hold for all $r$:
+    <ol>
+      <li>If the inputs to the adapter have $m$-th moment $\Theta_r(1)$ per entry, the outputs do too.</li>
+      <li>If the loss gradients at the adapter outputs are $\Theta_r(1)$ per entry, the loss gradients back into the inputs are too.</li>
+    </ol>
+  </aside>
+
+  <p class="pc-fade-in">Condition 1 is a forward-pass requirement: the adapter must not amplify or suppress activations as $r$ grows. Condition 2 is its mirror for backpropagation: gradients flowing <em>into</em> the adapter must be no larger or smaller in order than gradients flowing <em>out</em>. An adapter that satisfies both is transparent to the optimizer — rank becomes a pure capacity dial with no side-effects on learning speed.</p>
+
+  <pc-equation>
+    <script type="application/json">
+    {
+      "tex": "\\gamma_r = \\dfrac{\\alpha}{\\sqrt{r}}",
+      "terms": {
+        "\\gamma_r": "Scaling factor applied to the rank-$r$ adapter product $BA$.",
+        "\\alpha": "A fixed positive hyperparameter, independent of rank (replaces $\\alpha/r$ from standard LoRA).",
+        "r": "Adapter rank — the inner dimension of $A \\in \\mathbb{R}^{r \\times d_1}$ and $B \\in \\mathbb{R}^{d_2 \\times r}$."
+      }
+    }
+    </script>
+  </pc-equation>
+
+  <p class="pc-fade-in"><strong>Theorem 3.2</strong> states the result precisely: given the standard LoRA initialization ($B = 0$, entries of $A$ iid with variance $\sigma_A$ independent of $r$), in expectation over initialization both rank-stability conditions hold simultaneously if and only if $\gamma_r \in \Theta_r(1/\sqrt{r})$.<pc-cite key="yang2022"></pc-cite> Any $\gamma_r$ that shrinks faster than $1/\sqrt{r}$ — including LoRA's $\alpha/r$ — collapses the gradient. Any $\gamma_r$ that shrinks slower destabilizes activations. The square-root is the only crossover that absorbs the $r$ that emerges from the random initialization of $A$.</p>
+
+  <pc-toggle>
+    <script type="application/json">
+    {
+      "a": {
+        "label": "LoRA: $\\gamma_r = \\alpha / r$",
+        "body": "<p>The adapter output scales as $\\Theta_r(\\gamma_r^2 r) = \\Theta_r((\\alpha/r)^2 \\cdot r) = \\Theta_r(1/r)$. As $r$ grows this shrinks to zero — the forward activations through the adapter collapse. The same factor appears in the backward pass, so gradients into the adapter inputs also vanish. Rank 128 trains no better than rank 4; the extra parameters exist but cannot be reached by gradient descent.<pc-cite key=\"hu2022\"></pc-cite></p>"
+      },
+      "b": {
+        "label": "rsLoRA: $\\gamma_r = \\alpha / \\sqrt{r}$",
+        "body": "<p>The adapter output scales as $\\Theta_r(\\gamma_r^2 r) = \\Theta_r((\\alpha/\\sqrt{r})^2 \\cdot r) = \\Theta_r(1)$. The $r$ from the random initialization of $A$ is exactly absorbed by $1/\\sqrt{r}$, leaving both forward moments and backward gradients order-$1$ for every rank. Higher ranks remain fully trainable, and performance increases monotonically with $r$.</p>"
+      }
+    }
+    </script>
+  </pc-toggle>
+
+  <p class="pc-fade-in">The inductive composition argument makes the per-layer guarantee global. Input data carries no $r$-dependence. Apply Theorem 3.2 at the first adapter layer: its output stays $\Theta_r(1)$, which is exactly the assumption the theorem needs for the next layer. Proceeding forward to the loss, and then backward layer by layer, every adapter passes bounded signals in both directions. <strong>A single corrected $\gamma_r$ at each adapter suffices; no global re-tuning of the network is required.</strong></p>
+
+  <aside class="pc-callout pc-callout--alt pc-fade-in">
+    <div class="pc-callout-title">Practical consequence</div>
+    Because the merged weight $(W + \gamma_r BA)$ is rank-independent at inference time, rank is a <em>training-time</em> resource knob with no deployment cost. rsLoRA turns rank into a true compute-for-quality dial: double the rank, spend more training FLOPs, get a strictly better fine-tuned model.
+  </aside>
+
+  <p class="pc-fade-in">One subtlety the theorem acknowledges: the guarantee concerns gradient <em>magnitude</em>, not gradient <em>direction</em>. If the quality of features learned consistently depends on $r$ for some other reason, the $\Theta_r(1)$ assumption on gradients might not hold. The claim is that, absent such a rank-coupled feature quality effect, stability is guaranteed — and whether higher ranks genuinely yield better features is precisely what the experiments in §4 test.</p>
+
+  <details class="pc-skip">
+    <summary>Proof sketch (Theorem 3.2)</summary>
+    <div class="pc-prose" style="padding: 1em 0;">
+      <p>Let $f(x) = \gamma_r B A x$ and track $B_n, A_n$ through $n$ SGD steps with learning rate $\eta$. For $v_n = \nabla_{f(x_n)} L$, the per-step gradients are</p>
+      $$\nabla_{B_n} L = \gamma_r v_n x_n^T A_n^T, \qquad \nabla_{A_n} L = \gamma_r B_n^T v_n x_n^T.$$
+      <p>Since $B_0 = 0$, induction gives</p>
+      $$B_n = \!\left(-\eta\gamma_r \sum_{k=0}^{n-1} v_k x_k^T + O_r(\gamma_r^2)\right) A_0^T, \qquad A_n = A_0\!\left(1 + O_r(\gamma_r^2)\right).$$
+      <p>Substituting back into the adapter product:</p>
+      $$\gamma_r B_n A_n = -\gamma_r^2 \eta \sum_{k=0}^{n-1} v_k x_k^T A_0^T A_0 + O_r(\gamma_r^3)\, A_0^T A_0.$$
+      <p>Now take expectation over the random initialization of $A_0$. Because entries of $A_0$ are iid with variance $\sigma_A$ independent of $r$,</p>
+      $$\mathbb{E}_{A_0}\!\left[A_0^T A_0\right] = r\,\sigma_A^2\, I.$$
+      <p>This single step reveals why $r$ appears: the $r$ outer-product terms in $A_0^T A_0$ sum up, injecting an explicit factor of $r$ into both the forward pass and the backward gradient. The $m$-th moment of the adapter's output on a fresh input $x_n$ is therefore</p>
+      $$\mathbb{E}_{x, A_0}\!\left[\!\left(\gamma_r B_n A_n x_n\right)^m\right] \in \Theta_r\!\left((\gamma_r^2 r)^m\right).$$
+      <p>The backward gradient into the adapter input (equation 10 in the paper) is likewise in $\Theta_r(\gamma_r^2 r)$. For both to be $\Theta_r(1)$ — the definition of rank-stability — we need $\gamma_r^2 r = \Theta_r(1)$, i.e.</p>
+      $$\gamma_r \in \Theta_r\!\left(\frac{1}{\sqrt{r}}\right).$$
+      <p>If $\gamma_r$ shrinks faster (e.g.\ $1/r$) then $\gamma_r^2 r \to 0$ — gradient collapse. If it shrinks slower (e.g.\ $1/r^{1/4}$) then $\gamma_r^2 r \to \infty$ — activation explosion. The $\sqrt{r}$ denominator is the unique crossover. $\blacksquare$</p>
+    </div>
+  </details>
+
+</div>

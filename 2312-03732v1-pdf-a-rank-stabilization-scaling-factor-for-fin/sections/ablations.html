@@ -1,0 +1,97 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-eyebrow pc-fade-in">Appendix B · Ablations</div>
+  <div class="pc-source" data-page="9">pp. 9–12</div>
+
+  <p class="pc-fade-in">
+    The central claim — that <strong>gradient collapse under LoRA is caused by the scaling factor, not by the optimizer, model family, dataset, or adapter placement</strong> — is stress-tested across six controlled probes. Each ablation isolates one degree of freedom while holding the rest fixed, collectively ruling out the most natural competing explanations for the observed collapse.
+  </p>
+
+  <h3 class="pc-fade-in" style="font-size:1.05rem;font-weight:400;margin-top:2rem;color:var(--ink)">B.1 — SGD rules out optimizer-side stabilization</h3>
+
+  <p class="pc-fade-in">
+    AdamW's adaptive per-parameter learning rates could, in principle, be compensating for collapsing gradients by rescaling updates — masking the underlying instability. Replacing AdamW with vanilla SGD at a fixed learning rate of <strong>1 × 10⁻⁴</strong> removes this confound entirely. The gradient-norm pattern is identical to the AdamW run: LoRA collapses with rank while rsLoRA keeps all ranks within the same order of magnitude. In fact, rsLoRA with SGD is <em>more</em> stable — all ranks hold nearly the same norm value for roughly the first 100 training steps.
+  </p>
+
+  <figure class="pc-figure pc-rise l-page">
+    <img src="figures/fig4-sgd.png" style="width:100%;max-width:760px;display:block;margin:0 auto" alt="Gradient norm over training steps with SGD for LoRA (collapsing, copper) vs rsLoRA (flat, blue-green) across ranks 4–2048">
+    <figcaption>Gradient norms with SGD (lr 1×10⁻⁴), ranks 4–2048. LoRA (copper) collapses at higher ranks; rsLoRA (blue-green) keeps norms within a single order of magnitude throughout. The shaded band spans the min–max envelope per method. rsLoRA's early stability is even sharper than with AdamW — the rank bands nearly coincide for the first ~100 steps.</figcaption>
+  </figure>
+
+  <h3 class="pc-fade-in" style="font-size:1.05rem;font-weight:400;margin-top:2rem;color:var(--ink)">B.2 — Different model, optimizer, and dataset</h3>
+
+  <p class="pc-fade-in">
+    Switching from Llama 2 7B + AdamW + OpenOrca to <strong>GPT-J 6B <pc-cite key="wang2021gptj"></pc-cite> + Adafactor <pc-cite key="shazeer2018"></pc-cite> + GSM8k <pc-cite key="cobbe2021"></pc-cite></strong> (grade-school math word problems) produces the same qualitative outcome. All LoRA training curves collapse so completely that they overlap into a single band — indistinguishable by rank. rsLoRA curves separate cleanly, with higher ranks reaching lower perplexity.
+  </p>
+
+  <figure class="pc-figure pc-rise l-page">
+    <img src="figures/fig5-gptj.png" style="width:100%;max-width:760px;display:block;margin:0 auto" alt="GPT-J fine-tuned on GSM8k with Adafactor: perplexity and gradient norm for LoRA vs rsLoRA across ranks 4–2048">
+    <figcaption>GPT-J 6B fine-tuned on GSM8k with Adafactor, ranks 4–2048. Perplexity (left): all LoRA curves overlap into one band; rsLoRA separates by rank. Gradient norm (right): LoRA spans multiple orders of magnitude across ranks; rsLoRA tracks a tight band. The pattern transfers completely to this out-of-distribution setting.</figcaption>
+  </figure>
+
+  <h3 class="pc-fade-in" style="font-size:1.05rem;font-weight:400;margin-top:2rem;color:var(--ink)">B.3 — Scaled initialization alone is not enough</h3>
+
+  <p class="pc-fade-in">
+    One might ask whether the fix belongs in the initialization of <code>A</code> rather than in <code>γ_r</code>. Two probes answer this. First: drop <code>γ_r</code> entirely and scale <code>A</code>'s initialization by <code>1/√r</code> — gradient norms start equal at ranks 4 and 2048, but training becomes numerically unstable for rank 2048 mid-run. Second: use the scaled initialization <em>and</em> LoRA's <code>1/r</code> scaling factor — the result is identically sub-optimal to plain LoRA. <strong>The corrective factor must live in <code>γ_r</code> throughout training, not just at initialization.</strong>
+  </p>
+
+  <figure class="pc-figure pc-rise l-page">
+    <img src="figures/fig6-scaledinit.png" style="width:100%;max-width:760px;display:block;margin:0 auto" alt="Training perplexity for two scaled-initialization variants at ranks 4 (dark) and 2048 (bright)">
+    <figcaption>Training perplexity for ranks 4 (darker) and 2048 (brighter). Left: no scaling factor, A initialized by 1/√r — rank-2048 perplexity diverges mid-training. Right: scaled initialization combined with LoRA's 1/r factor — rank-2048 matches the sub-optimal LoRA trajectory. Neither initialization-only variant repairs the collapse.</figcaption>
+  </figure>
+
+  <h3 class="pc-fade-in" style="font-size:1.05rem;font-weight:400;margin-top:2rem;color:var(--ink)">B.4 — LR sweep over LoRA-rank-4 cannot recover capacity</h3>
+
+  <p class="pc-fade-in">
+    A skeptic could argue that rsLoRA's larger <code>γ_r</code> at high rank simply acts as an effective learning-rate boost. To test this, LoRA at rank 4 is swept over a broad grid of learning rates — <strong>{5, 1} × 10<sup>n</sup></strong> for <em>n</em> ∈ {−4, −3, −2} — more than two orders of magnitude. The best result anywhere on that grid still loses to rsLoRA at rank 2048 using the untuned default learning rate.
+  </p>
+
+  <pc-table>
+    <script type="application/json">
+    {
+      "title": "B.4 — LR sweep cannot replace capacity",
+      "columns": [
+        {"label": "Method", "align": "left"},
+        {"label": "Best learning rate", "align": "right"},
+        {"label": "Perplexity ↓", "align": "right"}
+      ],
+      "rows": [
+        {"cells": ["LoRA, rank 4 (LR-swept)", "5×10⁻⁴", 1.863]},
+        {"cells": ["rsLoRA, rank 2048 (default LR)", "5×10⁻⁵", 1.836], "highlight": true}
+      ],
+      "highlightBest": true,
+      "caption": "From §B.4. Best LoRA after sweeping {5,1}×10ⁿ, n∈{−4,−3,−2}, still worse than rsLoRA at default LR — ruling out the effective-LR explanation."
+    }
+    </script>
+  </pc-table>
+
+  <p class="pc-fade-in">
+    The gap confirms that the performance difference arises from genuine rank capacity: <strong>higher-rank adapters span a richer subspace of weight updates</strong>, and that capacity is only unlocked when <code>γ_r ∝ 1/√r</code> prevents the gradients from collapsing into it.
+  </p>
+
+  <h3 class="pc-fade-in" style="font-size:1.05rem;font-weight:400;margin-top:2rem;color:var(--ink)">B.5 — Attention-only adapter placement</h3>
+
+  <p class="pc-fade-in">
+    Standard LoRA practice often restricts adapters to the attention projection matrices, omitting the MLP feed-forward layers. This placement preserves the collapse pattern in both directions: LoRA gradient norms still fan out across ranks, and rsLoRA norms still cluster. Higher rsLoRA ranks still converge to lower perplexity; higher LoRA ranks still offer no benefit. <strong>The phenomenon is not a side-effect of adapter placement.</strong>
+  </p>
+
+  <figure class="pc-figure pc-rise l-page">
+    <img src="figures/fig7-attn.png" style="width:100%;max-width:760px;display:block;margin:0 auto" alt="Perplexity and gradient norm for Llama 2 7B with adapters in attention modules only, LoRA vs rsLoRA, ranks 4–2048">
+    <figcaption>Llama 2 7B with adapters in attention modules only, ranks 4–2048. Both perplexity and gradient-norm plots mirror the all-modules results: LoRA collapses (copper, spreads across ranks), rsLoRA stabilizes (blue-green, tight band). Restricting adapter placement does not change the qualitative finding.</figcaption>
+  </figure>
+
+  <h3 class="pc-fade-in" style="font-size:1.05rem;font-weight:400;margin-top:2rem;color:var(--ink)">B.6 — Other exponents bracket the √r choice</h3>
+
+  <p class="pc-fade-in">
+    With all six ranks collapsed onto a single comparison at <strong>r = 2048</strong>, four scaling exponents are evaluated: <code>γ_r = 1/r²</code> (more aggressive than LoRA), <code>1/r</code> (LoRA), <code>1/r^{1/4}</code> (less aggressive than LoRA), and <code>1/√r</code> (rsLoRA). The outcomes align precisely with the theorem's prediction. Reducing the exponent below <code>1/2</code> — i.e., dividing by <em>less</em> than <code>√r</code> — produces unstable or diverging training. Increasing it above <code>1/2</code> — dividing by <em>more</em> than <code>√r</code> — produces the familiar LoRA-style collapse. <strong>Only <code>γ_r ∝ 1/√r</code> threads the needle between instability and collapse.</strong>
+  </p>
+
+  <figure class="pc-figure pc-rise l-page">
+    <img src="figures/fig8-otherscaling.png" style="width:100%;max-width:760px;display:block;margin:0 auto" alt="Training perplexity at r=2048 for four scaling exponents: 1/r², 1/r, 1/r^1/4, 1/√r">
+    <figcaption>Training perplexity at rank 2048 for four choices of γ_r. 1/r² (slowest decay) collapses hardest — perplexity barely moves. 1/r¹/⁴ (fastest decay relative to √r) is unstable. 1/r (LoRA) sits in between but still stalls. Only 1/√r (rsLoRA) reaches the lowest perplexity, confirming the theoretical bracket.</figcaption>
+  </figure>
+
+  <aside class="pc-callout pc-fade-in">
+    <div class="pc-callout-title">Takeaway</div>
+    Across six controlled ablations — varying optimizer (SGD, Adafactor), model (GPT-J 6B), dataset (GSM8k), adapter placement (attention-only), initialization scheme, and scaling-factor exponent — the conclusion is unchanged: <strong>rank-stabilized gradients require exactly <code>γ_r ∝ 1/√r</code></strong>, and no combination of learning-rate tuning or initialization adjustments can substitute for the correct exponent.
+  </aside>
+</div>

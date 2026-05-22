@@ -1,0 +1,19 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-eyebrow pc-fade-in">§1 · Introduction</div>
+  <div class="pc-source" data-page="1">p. 1</div>
+
+  <p class="pc-fade-in">Fine-tuning a large language model on a downstream task means updating hundreds of millions — often billions — of parameters, an expense that grows with model scale and quickly exhausts the memory budgets of most practitioners.<pc-cite key="bommasani2021"></pc-cite> <pc-term def="Parameter-efficient fine-tuning: a family of methods that update only a small subset of parameters while keeping the bulk of the pretrained weights frozen, achieving competitive accuracy at a fraction of the compute cost.">Parameter-efficient fine-tuning (PEFT)</pc-term> sidesteps this by optimising a small auxiliary structure while the pretrained weights stay frozen.<pc-cite key="ding2022"></pc-cite><pc-cite key="houlsby2019"></pc-cite></p>
+
+  <p class="pc-fade-in"><strong>Low-Rank Adapters (LoRA)</strong> is among the most widely adopted PEFT approaches.<pc-cite key="hu2022"></pc-cite> Each linear layer with weight matrix $W \in \mathbb{R}^{d_2 \times d_1}$ is augmented by a trainable rank-$r$ correction: the forward pass becomes $x_\text{out} = (W + \gamma_r BA)\,x_\text{in}$, where $A \in \mathbb{R}^{r \times d_1}$ and $B \in \mathbb{R}^{d_2 \times r}$ are the adapter parameters and $\gamma_r$ is a rank-dependent scaling factor. After fine-tuning, the adapter is folded directly into $W$, so inference sees a single matrix and pays no extra cost regardless of rank.</p>
+
+  <aside class="pc-callout pc-fade-in">
+    <div class="pc-callout-title">The core tension</div>
+    Choosing a higher rank $r$ increases the adapter's representational capacity — but only if the optimizer can actually learn through it. The scaling factor $\gamma_r$ determines whether that capacity is reachable.
+  </aside>
+
+  <p class="pc-fade-in">The conventional choice sets $\gamma_r = \alpha / r$ for a fixed hyperparameter $\alpha$. <strong>Dividing by $r$ is too aggressive.</strong> As $r$ grows, the scaled product $\gamma_r BA$ shrinks toward zero and its gradient — which scales as $\Theta_r(\gamma_r^2 r)$ — collapses. The result is that training with rank 128 converges to nearly the same loss as rank 4: the extra parameters exist but cannot be used effectively.</p>
+
+  <p class="pc-fade-in">The correct scaling follows from requiring the adapter outputs and their gradients to remain $\Theta_r(1)$ — bounded away from zero and infinity — as $r \to \infty$. That condition is satisfied if and only if $\gamma_r \in \Theta_r(1/\sqrt{r})$, i.e. <strong>dividing by $\sqrt{r}$ instead of $r$</strong>. Setting $\gamma_r = \alpha / \sqrt{r}$ defines <pc-term def="Rank-Stabilized LoRA: the single-change variant of LoRA that replaces the 1/r scaling factor with 1/√r, keeping adapter gradients bounded across all ranks.">rsLoRA</pc-term>.</p>
+
+  <p class="pc-fade-in">The practical upshot is a clean compute-performance trade-off. Because the adapter is folded back into $W$ at the end of training, deployment cost is rank-independent. A practitioner can therefore spend more training compute by increasing $r$ and receive strictly better fine-tuning performance — something that the standard $1/r$ factor makes impossible.<pc-cite key="zhang2023adalora"></pc-cite></p>
+</div>

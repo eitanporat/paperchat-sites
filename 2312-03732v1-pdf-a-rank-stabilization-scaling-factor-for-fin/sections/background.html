@@ -1,0 +1,84 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-eyebrow pc-fade-in">§2 · Background &amp; Relevant Works</div>
+  <div class="pc-source" data-page="2">pp. 2–3</div>
+
+  <p class="pc-fade-in">
+    Fine-tuning a large pretrained model updates every weight — an operation that quickly becomes impractical at the scale of modern LLMs <pc-cite key="bommasani2021"></pc-cite>. The key insight behind
+    <pc-term def="Low-Rank Adaptation: a parameter-efficient fine-tuning method that adds a low-rank matrix product adapter to each selected linear layer, leaving pretrained weights frozen.">LoRA</pc-term>
+    <pc-cite key="hu2022"></pc-cite>, building on earlier adapter work <pc-cite key="houlsby2019"></pc-cite> and the empirical observation that fine-tuning operates on a low-intrinsic-dimension manifold <pc-cite key="aghajanyan2020"></pc-cite><pc-cite key="li2018"></pc-cite>, is that the weight <em>update</em> itself is low-rank — so a frozen pretrained matrix can be augmented by a cheap rank-<code>r</code> correction.
+  </p>
+
+  <figure class="pc-figure pc-rise">
+    <img src="figures/img-002-000.png" alt="Diagram showing LoRA reparametrization: frozen pretrained weight W on the left; right branch has B (zero-initialized) stacked above A (Gaussian-initialized) with bottleneck rank r; both branches feed into the output h." style="max-width:380px;display:block;margin:0 auto">
+    <figcaption>The LoRA reparametrization. The pretrained <strong>W</strong> is frozen; only the low-rank factors <strong>A</strong> (Gaussian init) and <strong>B</strong> (zero init) are trained, then <strong>γ<sub>r</sub>·BA</strong> is merged back into <strong>W</strong> at inference. Reproduced from <pc-cite key="hu2022"></pc-cite>.</figcaption>
+  </figure>
+
+  <p class="pc-fade-in">
+    Concretely, a linear layer mapping <code>x<sub>in</sub> ∈ ℝ<sup>d₁</sup></code> via <code>W ∈ ℝ<sup>d₂×d₁</sup></code> is augmented with an adapter so that the full mapping becomes:
+  </p>
+
+  <pc-equation>
+    <script type="application/json">
+    {
+      "tex": "x_{\\text{out}} = (W + \\gamma_r B A)\\, x_{\\text{in}} + b",
+      "terms": {
+        "W": "Frozen pretrained weight matrix, $W \\in \\mathbb{R}^{d_2 \\times d_1}$. Not updated during fine-tuning.",
+        "A": "First adapter factor, $A \\in \\mathbb{R}^{r \\times d_1}$. Initialized iid Gaussian with variance independent of $r$.",
+        "B": "Second adapter factor, $B \\in \\mathbb{R}^{d_2 \\times r}$. Initialized to zero so the adapter contributes nothing at the start of training.",
+        "\\gamma_r": "Rank-dependent scaling factor. Standard LoRA sets $\\gamma_r = \\alpha / r$ for a hyperparameter $\\alpha$. The core of this paper is arguing this choice is wrong.",
+        "r": "Adapter rank — the bottleneck dimension of $BA$. Typically $r \\ll d_1, d_2$; choosing $r$ trades parameter count against expressive capacity."
+      }
+    }
+    </script>
+  </pc-equation>
+
+  <p class="pc-fade-in">
+    After fine-tuning, the product <code>W + γ<sub>r</sub>BA</code> is stored as a single matrix — identical in shape to <code>W</code> — so inference cost is unchanged at any rank. The rank-<code>r</code> constraint keeps training cost proportional to <code>r</code>, while <code>r</code> itself acts as a continuous compute knob. Standard LoRA fixes <code>γ<sub>r</sub> = α/r</code>: dividing by a full power of <code>r</code> is, as §3 will show, the source of gradient collapse at large ranks.
+  </p>
+
+  <pc-toggle>
+    <script type="application/json">
+    {
+      "a": {
+        "label": "Standard LoRA (γ_r = α/r)",
+        "body": "<p><strong>γ<sub>r</sub> = α/r</strong> divides the adapter output by a full power of rank. As <em>r</em> grows, this shrinks adapter outputs and their gradients at rate 1/<em>r</em> — faster than the &radic;<em>r</em> growth of the matrix product norm — so the effective learning signal collapses. Empirically, rank 64 matches rank 4 in training loss (Hu et al. Table 6), leading to the (incorrect) conclusion that low ranks suffice.</p>"
+      },
+      "b": {
+        "label": "AdaLoRA (dynamic rank, same γ_r)",
+        "body": "<p><strong>AdaLoRA</strong> <pc-cite key=\"zhang2023adalora\"></pc-cite> extends LoRA by representing adapters in approximate SVD form and pruning singular values dynamically based on an importance score, allocating rank across layers on a fixed compute budget. Because it inherits the same <strong>γ<sub>r</sub> = α/r</strong> scaling, it suffers the same gradient collapse at higher budgeted ranks — making it a direct candidate for the correction derived in §3.</p>"
+      }
+    }
+    </script>
+  </pc-toggle>
+
+  <p class="pc-fade-in">
+    To derive the <em>right</em> scaling factor analytically, this work borrows a framework from Yang &amp; Hu <pc-cite key="yang2022"></pc-cite> for studying fully-connected networks in the infinite-width limit. Their
+    <pc-term def="A parametrization of a neural network's initialization scale, per-layer learning rate, and weight magnitude as three coupled power-law exponents (a, b, c) of the hidden width d. Choosing these exponents correctly prevents feature-learning collapse as width grows.">abc-parametrization</pc-term>
+    treats every width-dependent quantity as a power of the hidden dimension <code>d</code>:
+  </p>
+
+  <pc-equation>
+    <script type="application/json">
+    {
+      "tex": "W^l = \\frac{1}{d^{a_l}}\\,\\tilde{W}^l,\\quad \\tilde{W}^l_{i,j} \\sim \\mathcal{N}\\!\\left(0,\\frac{1}{d^{b_l}}\\right),\\quad \\eta_l = \\frac{\\eta}{d^{c}}",
+      "wide": true,
+      "terms": {
+        "a_l": "Weight-magnitude exponent for layer $l$. Controls how large activations grow with width.",
+        "b_l": "Initialization-variance exponent for layer $l$. Controls how spread out initial weights are.",
+        "c":   "Learning-rate exponent, shared across layers. Controls how step size scales with width.",
+        "d":   "Hidden width (the large parameter; corresponds to adapter rank $r$ in the LoRA analysis).",
+        "\\eta": "Base learning rate scalar."
+      }
+    }
+    </script>
+  </pc-equation>
+
+  <p class="pc-fade-in">
+    Yang &amp; Hu showed that standard schemes — those that ignore the <code>d</code>-dependence of the scale and learning-rate exponents — produce collapsing or diverging gradients as <code>d → ∞</code>, and derived the unique <code>(a, b, c)</code> triple that keeps learning stable at any width. Substituting adapter rank <code>r</code> for width <code>d</code>, and LoRA's scaling factor <code>γ<sub>r</sub></code> for the weight-magnitude exponent <code>a</code>, yields the exact same instability criterion — and, in §3, the unique correction.
+  </p>
+
+  <aside class="pc-callout pc-fade-in">
+    <div class="pc-callout-title">Setup for §3</div>
+    Both LoRA and AdaLoRA scale adapters by <strong>α/r</strong> — a choice that implicitly sends adapter outputs to zero as rank grows. The abc-parametrization framework provides the machinery to prove, in the <em>r</em> → ∞ limit, exactly which scaling exponent keeps gradients stable — and the answer is not 1/<em>r</em>.
+  </aside>
+</div>

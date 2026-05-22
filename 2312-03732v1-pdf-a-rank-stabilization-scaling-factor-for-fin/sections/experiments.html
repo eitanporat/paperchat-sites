@@ -1,0 +1,39 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-eyebrow pc-fade-in">§4 · Experimental Results</div>
+  <div class="pc-source" data-page="4">pp. 4–5</div>
+
+  <p class="pc-fade-in">
+    Every run fine-tunes <pc-cite key="touvron2023"></pc-cite> Llama 2 on 20,000 examples from the OpenOrca instruction-tuning dataset <pc-cite key="mukherjee2023"></pc-cite>, using AdamW <pc-cite key="loshchilov2019"></pc-cite> at a constant learning rate of $5 \times 10^{-5}$, batch size 32, and context window 512. Adapters are placed on every linear (non-LayerNorm) sub-module across both attention and feed-forward MLP layers — the placement shown to maximise parameter-budget efficiency <pc-cite key="zhang2023adalora"></pc-cite>. Six ranks are swept: $r \in \{4, 8, 32, 128, 512, 2048\}$, with all other hyperparameters held fixed, so rank is the sole variable.
+  </p>
+
+  <p class="pc-fade-in">
+    <strong>Higher rank ought to help</strong> — more adapter parameters span a higher-dimensional subspace of the loss landscape, and full fine-tuning consistently outperforms parameter-efficient methods when compute is available. The central question is whether the scaling factor in conventional LoRA actually lets that extra capacity through.
+  </p>
+
+  <figure class="pc-figure pc-rise l-page">
+    <img src="figures/fig2-perplexity.png" style="width:100%;max-width:760px;display:block;margin:0 auto" alt="Fine-tuning perplexity curves for LoRA and rsLoRA across six ranks">
+    <figcaption>Figure 2 — Llama 2 fine-tuning perplexity on 20k OpenOrca examples. Copper curves (LoRA) collapse onto one band irrespective of $r \in \{4, 8, 32, 128, 512, 2048\}$; blue→green curves (rsLoRA) separate cleanly with higher $r$ reaching lower perplexity.</figcaption>
+  </figure>
+
+  <p class="pc-fade-in">
+    The perplexity curves make the divergence immediate. Every LoRA run converges to roughly the same loss regardless of rank — some high-rank runs land <em>slightly worse</em> than rank 4, confirming that the $\gamma_r = \alpha/r$ factor actively suppresses whatever additional capacity the larger adapters could provide. rsLoRA curves fan out in the opposite direction: each rank increment produces a measurable, monotone reduction in final perplexity, with $r = 2048$ pulling well clear of $r = 4$.
+  </p>
+
+  <p class="pc-fade-in">
+    To pin down the mechanism rather than just the outcome, training tracks the average parameter gradient norm at every step. If $\gamma_r = \alpha/r$ truly collapses learning, gradient magnitudes should shrink as $r$ grows — and the collapse should be visible from the very first update, before any feature-learning effects could mask it.
+  </p>
+
+  <figure class="pc-figure pc-rise l-page">
+    <img src="figures/fig3-gradnorm.png" style="width:100%;max-width:760px;display:block;margin:0 auto" alt="Average parameter gradient norm for LoRA and rsLoRA across six ranks">
+    <figcaption>Figure 3 — average parameter gradient norm during the same run. LoRA's copper curves fan out across two orders of magnitude as $r$ grows (gradient collapse). rsLoRA's curves all sit at the same magnitude from step 0 and stay there throughout training.</figcaption>
+  </figure>
+
+  <p class="pc-fade-in">
+    The gradient-norm panel validates the theory point-for-point. LoRA's curves span roughly two orders of magnitude across ranks, with the highest ranks pushed down to near-zero gradients from the first step — the optimizer is effectively blind to the extra adapter dimensions. rsLoRA initialises all six ranks at the same gradient norm and keeps them within the same order of magnitude for the full 600 steps, exactly as Theorem 3.2 demands of a rank-stabilized adapter.
+  </p>
+
+  <aside class="pc-callout">
+    <div class="pc-callout-title">Takeaway</div>
+    Replacing the $1/r$ scaling factor with $1/\sqrt{r}$ costs nothing at inference but converts rank from a collapsed redundancy into a genuine performance dial — every additional adapter dimension contributes to learning rather than vanishing into gradient noise.
+  </aside>
+</div>

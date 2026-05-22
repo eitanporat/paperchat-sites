@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>A Rank Stabilization Scaling Factor for Fine-Tuning with LoRA — paperchat</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <link rel="stylesheet" href="_lib/pc.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" defer></script>
+</head><body>
+
+<pc-header>
+  <script type="application/json">
+  {
+    "title": "A Rank Stabilization Scaling Factor for Fine-Tuning with LoRA",
+    "dek": "Dividing LoRA adapters by √r instead of r removes the gradient collapse that makes high-rank LoRA stall, turning adapter rank into a real compute-for-quality dial with no inference cost.",
+    "authors": ["Damjan Kalajdzievski"],
+    "affiliations": ["Tenyx"],
+    "published": "November 2023",
+    "doi": "arXiv:2312.03732",
+    "doi_url": "https://arxiv.org/abs/2312.03732"
+  }
+  </script>
+</pc-header>
+
+<section class="pc-page" id="intro">
+  <div class="pc-eyebrow">§1 · introduction</div>
+  <h2>Why LoRA stalls at higher rank</h2>
+  <div data-section-loader="intro">Loading…</div>
+</section>
+
+<section class="pc-page" id="background">
+  <div class="pc-eyebrow">§2 · background</div>
+  <h2>LoRA and the abc-parametrization lens</h2>
+  <div data-section-loader="background">Loading…</div>
+</section>
+
+<section class="pc-page" id="rslora">
+  <div class="pc-eyebrow">§3 · method</div>
+  <h2>The √r correction and what makes an adapter rank-stable</h2>
+  <div data-section-loader="rslora">Loading…</div>
+</section>
+
+<section class="pc-page" id="experiments">
+  <div class="pc-eyebrow">§4 · experiments</div>
+  <h2>Higher rank, finally, helps</h2>
+  <div data-section-loader="experiments">Loading…</div>
+</section>
+
+<section class="pc-page" id="ablations">
+  <div class="pc-eyebrow">§B · ablations</div>
+  <h2>Ablations: SGD, GPT-J, init-only, learning-rate, attention-only, other γ_r</h2>
+  <div data-section-loader="ablations">Loading…</div>
+</section>
+
+<section class="pc-page" id="activations-conclusion">
+  <div class="pc-eyebrow">§5 · discussion</div>
+  <h2>Activations, takeaway, and what's next</h2>
+  <div data-section-loader="activations-conclusion">Loading…</div>
+</section>
+
+<div class="pc-appendix">
+  <pc-bibliography>
+    <script type="application/json">
+    [
+      {"key": "aghajanyan2020", "authors": "Aghajanyan, A., Zettlemoyer, L., Gupta, S.", "year": 2020,
+       "title": "Intrinsic dimensionality explains the effectiveness of language model fine-tuning",
+       "venue": "arXiv:2012.13255", "url": "https://arxiv.org/abs/2012.13255"},
+      {"key": "bommasani2021", "authors": "Bommasani, R. et al.", "year": 2021,
+       "title": "On the opportunities and risks of foundation models",
+       "venue": "arXiv:2108.07258", "url": "https://arxiv.org/abs/2108.07258"},
+      {"key": "cobbe2021", "authors": "Cobbe, K. et al.", "year": 2021,
+       "title": "Training verifiers to solve math word problems",
+       "venue": "arXiv:2110.14168", "url": "https://arxiv.org/abs/2110.14168"},
+      {"key": "ding2022", "authors": "Ding, N. et al.", "year": 2022,
+       "title": "Delta tuning: A comprehensive study of parameter efficient methods for pre-trained language models",
+       "venue": "arXiv:2203.06904", "url": "https://arxiv.org/abs/2203.06904"},
+      {"key": "edalati2022", "authors": "Edalati, A. et al.", "year": 2022,
+       "title": "Krona: Parameter efficient tuning with Kronecker adapter",
+       "venue": "arXiv:2212.10650", "url": "https://arxiv.org/abs/2212.10650"},
+      {"key": "houlsby2019", "authors": "Houlsby, N. et al.", "year": 2019,
+       "title": "Parameter-efficient transfer learning for NLP",
+       "venue": "ICML 2019", "url": "https://proceedings.mlr.press/v97/houlsby19a.html"},
+      {"key": "hu2022", "authors": "Hu, E. J. et al.", "year": 2022,
+       "title": "LoRA: Low-rank adaptation of large language models",
+       "venue": "ICLR 2022", "url": "https://openreview.net/forum?id=nZeVKeeFYf9"},
+      {"key": "hyeonwoo2023", "authors": "Hyeon-Woo, N., Ye-Bin, M., Oh, T.-H.", "year": 2023,
+       "title": "FedPara: Low-rank Hadamard product for communication-efficient federated learning",
+       "venue": "ICLR 2022", "url": "https://arxiv.org/abs/2108.06098"},
+      {"key": "li2018", "authors": "Li, C., Farkhoor, H., Liu, R., Yosinski, J.", "year": 2018,
+       "title": "Measuring the intrinsic dimension of objective landscapes",
+       "venue": "ICLR 2018", "url": "https://arxiv.org/abs/1804.08838"},
+      {"key": "liang2023", "authors": "Liang, J. et al.", "year": 2023,
+       "title": "Code as policies: Language model programs for embodied control",
+       "venue": "ICRA 2023", "url": "https://arxiv.org/abs/2209.07753"},
+      {"key": "liu2022", "authors": "Liu, H. et al.", "year": 2022,
+       "title": "Few-shot parameter-efficient fine-tuning is better and cheaper than in-context learning",
+       "venue": "NeurIPS 2022", "url": "https://arxiv.org/abs/2205.05638"},
+      {"key": "loshchilov2019", "authors": "Loshchilov, I., Hutter, F.", "year": 2019,
+       "title": "Decoupled weight decay regularization",
+       "venue": "ICLR 2019", "url": "https://arxiv.org/abs/1711.05101"},
+      {"key": "mukherjee2023", "authors": "Mukherjee, S. et al.", "year": 2023,
+       "title": "Orca: Progressive learning from complex explanation traces of GPT-4",
+       "venue": "arXiv:2306.02707", "url": "https://arxiv.org/abs/2306.02707"},
+      {"key": "ouyang2022", "authors": "Ouyang, L. et al.", "year": 2022,
+       "title": "Training language models to follow instructions with human feedback",
+       "venue": "NeurIPS 2022", "url": "https://arxiv.org/abs/2203.02155"},
+      {"key": "rasmy2021", "authors": "Rasmy, L., Xiang, Y., Xie, Z., Tao, C., Zhi, D.", "year": 2021,
+       "title": "Med-BERT: pretrained contextualized embeddings on large-scale structured electronic health records for disease prediction",
+       "venue": "NPJ Digital Medicine", "url": "https://www.nature.com/articles/s41746-021-00455-y"},
+      {"key": "shazeer2018", "authors": "Shazeer, N., Stern, M.", "year": 2018,
+       "title": "Adafactor: Adaptive learning rates with sublinear memory cost",
+       "venue": "ICML 2018", "url": "https://arxiv.org/abs/1804.04235"},
+      {"key": "touvron2023", "authors": "Touvron, H. et al.", "year": 2023,
+       "title": "Llama 2: Open foundation and fine-tuned chat models",
+       "venue": "arXiv:2307.09288", "url": "https://arxiv.org/abs/2307.09288"},
+      {"key": "wang2021gptj", "authors": "Wang, B., Komatsuzaki, A.", "year": 2021,
+       "title": "GPT-J-6B: A 6 billion parameter autoregressive language model",
+       "venue": "GitHub", "url": "https://github.com/kingoflolz/mesh-transformer-jax"},
+      {"key": "yang2022", "authors": "Yang, G., Hu, E. J.", "year": 2022,
+       "title": "Feature learning in infinite-width neural networks",
+       "venue": "ICML 2021", "url": "https://arxiv.org/abs/2011.14522"},
+      {"key": "zaken2022", "authors": "Zaken, E. B., Ravfogel, S., Goldberg, Y.", "year": 2022,
+       "title": "BitFit: Simple parameter-efficient fine-tuning for transformer-based masked language-models",
+       "venue": "ACL 2022", "url": "https://arxiv.org/abs/2106.10199"},
+      {"key": "zhang2023adalora", "authors": "Zhang, Q. et al.", "year": 2023,
+       "title": "Adaptive budget allocation for parameter-efficient fine-tuning",
+       "venue": "ICLR 2023", "url": "https://arxiv.org/abs/2303.10512"},
+      {"key": "zhu2023", "authors": "Zhu, W. et al.", "year": 2023,
+       "title": "Multilingual machine translation with large language models: Empirical results and analysis",
+       "venue": "arXiv:2304.04675", "url": "https://arxiv.org/abs/2304.04675"}
+    ]
+    </script>
+  </pc-bibliography>
+</div>
+
+<script type="module" src="_lib/pc.js"></script>
+<script>
+(async () => {
+  function execScripts(root) {
+    for (const old of root.querySelectorAll('script')) {
+      const s = document.createElement('script');
+      for (const a of old.attributes) s.setAttribute(a.name, a.value);
+      s.text = old.textContent;
+      old.replaceWith(s);
+    }
+  }
+  for (const el of document.querySelectorAll('[data-section-loader]')) {
+    const id = el.dataset.sectionLoader;
+    try {
+      const r = await fetch('sections/' + id + '.html');
+      if (!r.ok) continue;
+      const tpl = document.createElement('template');
+      tpl.innerHTML = await r.text();
+      execScripts(tpl.content);
+      el.replaceWith(tpl.content);
+    } catch {}
+  }
+  if (window.pcSite) { pcSite.primeReveals(document); pcSite.observeReveals(document); pcSite.hideOrphanReferences(document); pcSite.numberFigures(document); }
+  if (window.pcMath) pcMath.renderMathIn(document.body);
+})();
+</script>
+</body></html>
