@@ -10,16 +10,40 @@
   </p>
 
   <p class="pc-fade-in">
-    t-SNE plots of the four conditions (base model, NTP fine-tune, LLM-JEPA k=0, LLM-JEPA k=1)
-    tell a clear story: the base model has weak but non-zero cluster structure; NTP fine-tuning
-    <em>shatters</em> it — Text and Code points intermix without pattern; both LLM-JEPA variants
-    recover tight, paired clusters where each text point sits beside its code counterpart (Figure 6, appendix).
-    The quantitative signal comes from fitting a linear map <code>X</code> that minimises
-    <code>‖Enc(Text)·X − Enc(Code)‖</code>. Under NTP fine-tuning the residual sits at <strong>3 035</strong> —
-    barely lower than the untrained base model's 3 053. LLM-JEPA collapses it to <strong>4.47</strong> (k=0)
-    or <strong>4.04</strong> (k=1): a <em>three-order-of-magnitude</em> drop. The top-100 singular values of the
-    residual matrix fall from ~341 down to ~17, meaning the residual is confined to a narrow
-    subspace<pc-cite key="jing2021"></pc-cite>.
+    The four-panel t-SNE in <strong>Figure 6</strong> tells the story before any numbers do: the base
+    model has weak but non-zero Text/Code cluster structure; standard NTP fine-tuning
+    <em>shatters</em> it; both LLM-JEPA variants recover tight, paired clusters where each Text point
+    sits beside its Code counterpart.
+  </p>
+
+  <figure class="pc-figure pc-figure--zoom pc-rise l-page">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; max-width:780px; margin:0 auto;">
+      <div style="text-align:center;">
+        <img src="figures/tsne-x7.png" alt="t-SNE of Text and Code embeddings — base model, no fine-tuning" style="width:100%; display:block;">
+        <div class="pc-cap" style="font-size:13px; color:var(--ink-soft); margin-top:4px;">(a) Base model — no fine-tuning</div>
+      </div>
+      <div style="text-align:center;">
+        <img src="figures/tsne-x8.png" alt="t-SNE of Text and Code embeddings — baseline, NTP fine-tune" style="width:100%; display:block;">
+        <div class="pc-cap" style="font-size:13px; color:var(--ink-soft); margin-top:4px;">(b) Baseline — fine-tuned with NTP loss</div>
+      </div>
+      <div style="text-align:center;">
+        <img src="figures/tsne-x9.png" alt="t-SNE of Text and Code embeddings — LLM-JEPA k=0" style="width:100%; display:block;">
+        <div class="pc-cap" style="font-size:13px; color:var(--ink-soft); margin-top:4px;">(c) LLM-JEPA (ours), k = 0</div>
+      </div>
+      <div style="text-align:center;">
+        <img src="figures/tsne-x10.png" alt="t-SNE of Text and Code embeddings — LLM-JEPA k=1" style="width:100%; display:block;">
+        <div class="pc-cap" style="font-size:13px; color:var(--ink-soft); margin-top:4px;">(d) LLM-JEPA (ours), k = 1</div>
+      </div>
+    </div>
+    <figcaption><strong>Figure 6 (appendix).</strong> t-SNE of <span style="color:#5b3a8a;">Text</span> (purple) and <span style="color:#c8a020;">Code</span> (yellow) embeddings across the four conditions. Panel (b) shows NTP fine-tuning <em>disrupting</em> the structure the base model (a) already had; panels (c) and (d) show LLM-JEPA inducing tight, side-by-side Text/Code clusters that didn't exist before training.</figcaption>
+  </figure>
+
+  <p class="pc-fade-in">
+    The quantitative signal mirrors the picture. Fit a linear map <code>X</code> that minimises
+    <code>‖Enc(Text)·X − Enc(Code)‖</code> on the four conditions and the residual collapses
+    by three orders of magnitude under LLM-JEPA, with the top-100 singular values of the
+    residual matrix following the same drop — i.e., what's left after the linear fit is confined
+    to a narrow subspace<pc-cite key="jing2021"></pc-cite>.
   </p>
 
   <pc-table>
@@ -73,18 +97,17 @@
   </pc-table>
 
   <p class="pc-fade-in">
-    Three design choices stand out. First, <strong>the distance metric is load-bearing</strong>: the ℓ2 norm
-    catastrophically collapses representations to 2.22% accuracy, echoing dimensional-collapse
-    pathologies documented in contrastive learning<pc-cite key="jing2021"></pc-cite>. MSE recovers
-    (70.64%), but cosine<pc-cite key="chen2020"></pc-cite><pc-cite key="radford2021"></pc-cite>
-    edges it out and is the standard in vision JEPAs. Second, <strong>appending [PRED] beats prepending</strong>
-    (71.46% vs 68.07%) — the autoregressive stack has already processed the full context before
-    producing the predictor embedding, so the last position carries more. Third,
-    <strong>Text→Code is the natural direction</strong> (71.46% vs 65.70%): asking the model to predict the
-    structured output's embedding from the natural-language query aligns with the generative task.
-    InfoNCE<pc-cite key="vandenoord2018"></pc-cite> at the standard temperature τ=0.07 performs
-    worse than even the baseline, with variance three to four times larger — the in-batch negative
-    sampling pressure is mis-calibrated for this asymmetric task.
+    Three takeaways stand out from the table above. First, <strong>the distance metric is load-bearing</strong>:
+    ℓ2 doesn't just underperform — it triggers full dimensional collapse, the same pathology
+    documented in contrastive learning<pc-cite key="jing2021"></pc-cite>. MSE survives but cosine
+    wins narrowly<pc-cite key="chen2020"></pc-cite><pc-cite key="radford2021"></pc-cite>, and
+    cosine is the vision-JEPA default. Second, <strong>appending [PRED] beats prepending</strong> — the
+    autoregressive stack has processed the full Text context by the last position, so that's
+    where the predictor embedding belongs. Third, <strong>Text→Code is the natural direction</strong>: asking
+    the model to predict the structured output's embedding from a natural-language query aligns
+    with the generative task. InfoNCE<pc-cite key="vandenoord2018"></pc-cite> at the standard
+    temperature τ=0.07 fails outright, with several-times larger variance — its in-batch negative
+    sampling pressure is mis-calibrated for this asymmetric one-to-one task.
   </p>
 
   <p class="pc-fade-in">
