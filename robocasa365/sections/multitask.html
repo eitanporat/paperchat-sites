@@ -1,0 +1,61 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-eyebrow pc-fade-in">§4.1 · Multi-task training at scale</div>
+  <div class="pc-source" data-page="6">pp. 6–7</div>
+
+  <p class="pc-fade-in">The first stress test is the hardest thing a generalist should be able to do: train one language-conditioned, vision-based policy on <strong>all 300 pretraining tasks at once</strong> — 100 human demonstrations each, 30k in total — and see how far today's best methods get.</p>
+
+  <p class="pc-fade-in">Four state-of-the-art recipes go head to head: <em>Diffusion Policy</em><pc-cite key="chi2023diffusion"></pc-cite>, and three vision-language-action models — <em>π0</em><pc-cite key="black2024pi0"></pc-cite>, <em>π0.5</em><pc-cite key="pi05_2025"></pc-cite>, and <em>GR00T N1.5</em><pc-cite key="nvidia2025groot"></pc-cite> — the latter three fine-tuned from public pretrained checkpoints.</p>
+
+  <pc-grid class="pc-rise" data='[
+    {"eyebrow": "Split 1", "title": "Atomic", "body": "Short-horizon, single-skill tasks. The easiest regime for imitation learning — fewer chances to compound an error."},
+    {"eyebrow": "Split 2", "title": "Composite-Seen", "body": "Multi-stage skill sequences that did appear in the 300-task pretraining mixture. Longer horizons raise the difficulty."},
+    {"eyebrow": "Split 3", "title": "Composite-Unseen", "body": "Composite tasks never seen in pretraining — evaluated zero-shot to probe generalization to genuinely novel goals."}
+  ]'></pc-grid>
+
+  <p class="pc-fade-in">Evaluated across these 50 tasks in the pretraining kitchens, the percentage of successful task completions falls in a clean gradient.</p>
+
+  <pc-table class="pc-rise" data='{
+    "title": "Multi-task training success rates on 50 held-out tasks",
+    "columns": [
+      {"label": "Task split", "align": "left"},
+      {"label": "Diffusion Policy", "align": "right", "unit": "%"},
+      {"label": "π0", "align": "right", "unit": "%"},
+      {"label": "π0.5", "align": "right", "unit": "%"},
+      {"label": "GR00T N1.5", "align": "right", "unit": "%"}
+    ],
+    "rows": [
+      {"cells": ["Atomic", 15.7, 36.3, 39.6, 43.0]},
+      {"cells": ["Composite-Seen", 0.2, 5.2, 7.1, 9.6]},
+      {"cells": ["Composite-Unseen", 1.25, 0.7, 1.2, 4.4]},
+      {"cells": ["Average", 6.1, 15.0, 16.9, 20.0]}
+    ],
+    "highlightBest": true,
+    "caption": "From Table 1. Task success rate (%); best per column in bold."
+  }'></pc-table>
+
+  <p class="pc-fade-in">Difficulty ranks exactly as intuition predicts — <strong>Atomic (easiest) &lt; Composite-Seen &lt; Composite-Unseen</strong> — because longer horizons give errors more room to compound, and the unseen split was never trained on at all.</p>
+
+  <p class="pc-fade-in">Grouping the same numbers by split makes the method ordering pop: GR00T N1.5 sits on top of every bar, and the whole VLA trio towers over Diffusion Policy.</p>
+
+  <pc-compare class="l-page pc-rise" data='{
+    "title": "Success rate by task split",
+    "categories": ["Atomic", "Composite-Seen", "Composite-Unseen"],
+    "series": [
+      {"name": "Diffusion Policy", "values": [15.7, 0.2, 1.25]},
+      {"name": "π0", "values": [36.3, 5.2, 0.7]},
+      {"name": "π0.5", "values": [39.6, 7.1, 1.2]},
+      {"name": "GR00T N1.5", "values": [43.0, 9.6, 4.4]}
+    ],
+    "yLabel": "Success (%)",
+    "yMax": 50
+  }'></pc-compare>
+
+  <p class="pc-fade-in"><strong>GR00T N1.5 leads every split and overall</strong> (average 20.0), trailed by π0.5, then π0, with Diffusion Policy last at 6.1 — evidence that high-capacity vision-language-action models fit large, diverse multi-task robot data far better than a smaller policy can.</p>
+
+  <p class="pc-fade-in">The nonzero Composite-Unseen scores — GR00T's 4.4 chief among them — are the encouraging signal: these policies transfer <em>something</em> to tasks they were never trained on. But the win comes with an explicit caveat: batch-size compute, data composition, and whether the visual and language backbones are fine-tuned all move these numbers, so GR00T is <em>not</em> declared conclusively best.</p>
+
+  <aside class="pc-callout pc-fade-in">
+    <div class="pc-callout-title">Takeaway</div>
+    Big VLA models beat Diffusion Policy across the board and even score above zero on zero-shot composite tasks — but with the best method under 10% on anything longer than an atomic skill, the headroom on multi-task manipulation is enormous.
+  </aside>
+</div>

@@ -1,0 +1,169 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-eyebrow pc-fade-in">§4.3 · lifelong learning</div>
+  <div class="pc-source" data-page="8">pp. 8–9</div>
+
+  <p class="pc-fade-in">
+    A household robot never gets to stop learning. Instead of the tidy
+    <em>pretrain-then-finetune</em> split, lifelong learning strings tasks into a
+    sequence of phases and asks the harder question:
+    <strong>can new skills be acquired without erasing the old ones?</strong>
+  </p>
+
+  <p class="pc-fade-in">
+    The benchmark runs four phases of steadily growing horizon, where a
+    <pc-term def="One invocation of a robot skill from RoboCasa's library — pick-and-place, turning a knob, navigation, and so on.">stage</pc-term>
+    is a single robot-skill invocation. Each phase adds a fresh batch of tasks and
+    never revisits the earlier ones.
+  </p>
+
+  <pc-grid class="l-body-outset">
+    <script type="application/json">
+    [
+      {"eyebrow": "Phase 1", "title": "65 atomic tasks", "body": "Single-skill tasks. Trains on all human plus MimicGen atomic data."},
+      {"eyebrow": "Phase 2", "title": "20 composite · 2–3 stages", "body": "First multi-step tasks, human data only. Chains a couple of skills."},
+      {"eyebrow": "Phase 3", "title": "20 composite · 4–5 stages", "body": "Longer chains. Same 20-task budget, human data only."},
+      {"eyebrow": "Phase 4", "title": "20 composite · 6+ stages", "body": "The long-horizon chores — six or more skills in sequence."}
+    ]
+    </script>
+  </pc-grid>
+
+  <p class="pc-fade-in">
+    Training is strictly sequential: for phase <code>N</code>, take the phase
+    <code>N−1</code> model and fine-tune <em>only</em> on phase-<code>N</code> data,
+    then evaluate every task from phases <code>1…N</code> back in the pretraining
+    kitchens. The scoreboard below is that evaluation — a lower-triangular grid of
+    success rates.
+  </p>
+
+  <lifelong-table class="l-page"></lifelong-table>
+
+  <p class="pc-fade-in">
+    Two failures fall out of the same numbers. Read <strong>down the diagonal</strong> —
+    the tasks each phase just learned — and success collapses
+    <strong>41.5 → 24.5 → 11.3 → 4.3</strong> as the horizon grows: longer tasks
+    simply demand more data than a fixed 20-demo-per-task budget provides.
+  </p>
+
+  <p class="pc-fade-in">
+    Read instead <strong>down the atomic column</strong> — the very first skills, re-tested
+    after each new phase — and they rot <strong>41.5 → 13.9 → 13.9 → 10.6</strong>
+    without ever being retrained. That is <em>catastrophic forgetting</em>: skill on old
+    tasks decays the moment the model stops practising them.
+  </p>
+
+  <aside class="pc-callout">
+    <div class="pc-callout-title">Takeaway</div>
+    Sequential fine-tuning gets squeezed from both ends — new long-horizon tasks are
+    harder to pick up while old ones quietly fade — which is exactly why lifelong
+    learning stays an open problem and a useful testbed rather than a solved step.
+  </aside>
+</div>
+
+<script>
+class LifelongTable extends HTMLElement {
+  connectedCallback() {
+    const cols = ["Atomic", "2–3 Stage", "4–5 Stage", "6+ Stage"];
+    const grid = [
+      [41.5, null, null, null],
+      [13.9, 24.5, null, null],
+      [13.9,  4.8, 11.3, null],
+      [10.6,  1.7,  2.7,  4.3]
+    ];
+    // cells belonging to each reading: [row, col]
+    const diag = [[0,0],[1,1],[2,2],[3,3]];
+    const forget = [[0,0],[1,0],[2,0],[3,0]];
+    const seq = m => m.map(([r,c]) => grid[r][c]);
+
+    let head = '<th class="ll-corner"></th>';
+    cols.forEach(c => head += `<th>${c}</th>`);
+    let body = '';
+    for (let r = 0; r < 4; r++) {
+      body += `<tr><th class="ll-row">Phase ${r+1}</th>`;
+      for (let c = 0; c < 4; c++) {
+        const v = grid[r][c];
+        body += v === null
+          ? '<td class="ll-empty">—</td>'
+          : `<td data-r="${r}" data-c="${c}">${v.toFixed(1)}</td>`;
+      }
+      body += '</tr>';
+    }
+
+    this.innerHTML = `
+      <figure class="pc-fig-interactive pc-rise">
+        <div class="ll-controls" role="group" aria-label="Reading">
+          <button data-mode="diag" class="ll-btn ll-on">Newly learned tasks</button>
+          <button data-mode="forget" class="ll-btn">Previously learned tasks</button>
+        </div>
+        <div class="ll-wrap">
+          <table class="ll-table">
+            <thead><tr>${head}</tr></thead>
+            <tbody>${body}</tbody>
+          </table>
+        </div>
+        <div class="ll-trend" aria-live="polite"></div>
+        <figcaption><strong>Table 3.</strong> Task success rate (%) across four
+          phases of growing horizon; each phase fine-tunes only on its own new data,
+          then is re-evaluated on all tasks seen so far. Toggle the two readings to
+          trace new-task decline (the diagonal) versus forgetting (the atomic column).</figcaption>
+      </figure>`;
+
+    const cells = [...this.querySelectorAll('td[data-r]')];
+    const trend = this.querySelector('.ll-trend');
+    const key = (r,c) => `${r},${c}`;
+
+    const paint = mode => {
+      const set = new Set((mode === 'diag' ? diag : forget).map(([r,c]) => key(r,c)));
+      cells.forEach(td => td.classList.toggle('ll-hi', set.has(key(+td.dataset.r, +td.dataset.c))));
+      const nums = seq(mode === 'diag' ? diag : forget).map(n => n.toFixed(1)).join('  →  ');
+      const label = mode === 'diag'
+        ? 'Success on the tasks each phase just learned, as horizon grows'
+        : 'Success on the Phase-1 atomic tasks, re-tested after each phase (never retrained)';
+      trend.innerHTML = `<span class="ll-trend-label">${label}</span><span class="ll-trend-nums">${nums}</span>`;
+      this.querySelectorAll('.ll-btn').forEach(b => b.classList.toggle('ll-on', b.dataset.mode === mode));
+    };
+
+    this.querySelectorAll('.ll-btn').forEach(b =>
+      b.addEventListener('click', () => paint(b.dataset.mode)));
+    paint('diag');
+  }
+}
+customElements.define('lifelong-table', LifelongTable);
+</script>
+
+<style>
+  lifelong-table .ll-controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  lifelong-table .ll-btn {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 7px 12px; border-radius: 999px; cursor: pointer;
+    border: 1px solid color-mix(in oklch, var(--ink-soft) 45%, transparent);
+    background: transparent; color: var(--ink-soft); transition: all .18s ease;
+  }
+  lifelong-table .ll-btn.ll-on { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+  lifelong-table .ll-wrap { overflow-x: auto; }
+  lifelong-table .ll-table { border-collapse: collapse; width: 100%; font-size: 16px; }
+  lifelong-table .ll-table th, lifelong-table .ll-table td {
+    padding: 10px 14px; text-align: right;
+    border-bottom: 1px solid color-mix(in oklch, var(--ink-soft) 20%, transparent);
+  }
+  lifelong-table .ll-table thead th {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--ink-soft); font-weight: 400;
+    border-bottom: 1px solid color-mix(in oklch, var(--ink-soft) 40%, transparent);
+  }
+  lifelong-table .ll-row, lifelong-table .ll-corner { text-align: left;
+    font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px;
+    color: var(--ink-soft); font-weight: 400; letter-spacing: 0.04em; white-space: nowrap; }
+  lifelong-table .ll-table td { font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums; color: var(--ink); transition: background .2s ease, color .2s ease; }
+  lifelong-table .ll-empty { color: color-mix(in oklch, var(--ink-soft) 45%, transparent); }
+  lifelong-table td.ll-hi { background: var(--accent); color: var(--paper); font-weight: 600; }
+  lifelong-table .ll-trend { margin-top: 16px; display: flex; flex-direction: column; gap: 4px; }
+  lifelong-table .ll-trend-label {
+    font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px;
+    letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-soft); }
+  lifelong-table .ll-trend-nums {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums; font-size: 18px; color: var(--accent); }
+</style>

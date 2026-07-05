@@ -1,0 +1,64 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-eyebrow pc-fade-in">§4.4 · What pretraining data actually matters</div>
+  <div class="pc-source" data-page="14">pp. 14–15</div>
+
+  <p class="pc-fade-in">Pretraining pays off — but <em>which</em> pretraining? Holding the recipe fixed (GR00T N1.5, pretrain then post-train) and swapping only the pretraining mixture isolates the one variable that ships with every foundation model: the data it was fed.</p>
+
+  <p class="pc-fade-in">Four mixtures compete, from nothing to the full firehose: <strong>No Pretraining</strong>, <em>Human50</em> (human demos from 50 tasks — the Atomic and Composite-Seen tasks plus a random handful more), <em>Human300</em> (human demos from all 300 tasks), and <em>Human300 + MG60</em> (adds MimicGen-generated synthetic trajectories across 60 tasks).</p>
+
+  <pc-grid class="pc-rise" data='[
+    {"eyebrow": "Mixture 1", "title": "No Pretraining", "body": "Post-train from scratch on the target tasks alone. The floor everything else is measured against."},
+    {"eyebrow": "Mixture 2", "title": "Human50", "body": "Human data from 50 tasks: the Atomic + Composite-Seen tasks plus randomly chosen extras. Narrow task coverage."},
+    {"eyebrow": "Mixture 3", "title": "Human300", "body": "Human data spanning all 300 pretraining tasks. Maximum task diversity, human-quality demos only."},
+    {"eyebrow": "Mixture 4", "title": "Human300 + MG60", "body": "Human300 plus MimicGen synthetic trajectories across 60 tasks — cheap to scale, but mixed in quality."}
+  ]'></pc-grid>
+
+  <p class="pc-fade-in">Each mixture is scored twice: a low-data regime with <strong>10% of the target data</strong> and a high-data regime with the full <strong>100%</strong>, across the Atomic, Composite-Seen, and Composite-Unseen splits.</p>
+
+  <pc-table class="l-page pc-rise" data='{
+    "title": "Downstream success rate by pretraining mixture, in target kitchens",
+    "columns": [
+      {"label": "Target data", "align": "left"},
+      {"label": "No Pretraining", "align": "right", "unit": "%"},
+      {"label": "Human50", "align": "right", "unit": "%"},
+      {"label": "Human300", "align": "right", "unit": "%"},
+      {"label": "Human300 + MG60", "align": "right", "unit": "%"}
+    ],
+    "rows": [
+      {"cells": ["Atomic (10%)", 38.7, 52.0, 57.0, 56.9]},
+      {"cells": ["Composite-Seen (10%)", 11.0, 26.2, 28.7, 25.4]},
+      {"cells": ["Composite-Unseen (10%)", 11.2, 23.8, 32.3, 22.7]},
+      {"cells": ["Average (10%)", 21.0, 34.7, 40.0, 35.9]},
+      {"cells": ["Atomic (100%)", 60.6, 68.1, 70.0, 68.5]},
+      {"cells": ["Composite-Seen (100%)", 35.0, 41.0, 41.2, 40.6]},
+      {"cells": ["Composite-Unseen (100%)", 33.3, 38.5, 44.0, 42.1]},
+      {"cells": ["Average (100%)", 43.7, 50.0, 52.5, 51.1]}
+    ],
+    "highlightBest": true,
+    "caption": "From Table 4. Task success rate (%); best per column in bold."
+  }'></pc-table>
+
+  <p class="pc-fade-in">Reading the two Average rows side by side surfaces the two findings that matter — and one of them cuts against intuition.</p>
+
+  <pc-compare class="l-page pc-rise" data='{
+    "title": "Average success rate by pretraining mixture",
+    "categories": ["Average (10%)", "Average (100%)"],
+    "series": [
+      {"name": "No Pretraining", "values": [21.0, 43.7]},
+      {"name": "Human50", "values": [34.7, 50.0]},
+      {"name": "Human300", "values": [40.0, 52.5]},
+      {"name": "Human300 + MG60", "values": [35.9, 51.1]}
+    ],
+    "yLabel": "Success (%)",
+    "yMax": 60
+  }'></pc-compare>
+
+  <p class="pc-fade-in">First, <strong>task diversity wins</strong>: Human300 beats Human50 everywhere, and the gap is widest in the data-starved 10% regime (<strong>40.0 vs 34.7</strong>). The single largest jump lands on Composite-Unseen (23.8 → 32.3) — broadening the range of pretraining tasks is precisely what helps a policy reach for goals it never trained on.</p>
+
+  <p class="pc-fade-in">Second, and counterintuitively, <strong>synthetic data hurts</strong>: adding MimicGen's 60 tasks drops the average below plain Human300 in both regimes (35.9 vs 40.0 at 10%, 51.1 vs 52.5 at 100%). MimicGen can generate demonstrations at massive scale, but they vary in quality — and here quantity of mixed-quality data loses to a smaller pool of clean human demos.</p>
+
+  <aside class="pc-callout pc-fade-in">
+    <div class="pc-callout-title">Takeaway</div>
+    More <em>tasks</em> in pretraining help most — especially for novel goals in the low-data regime — but more <em>data</em> only helps if it is clean: bolting on large-scale synthetic demos of uneven quality drags downstream success below human-only pretraining, leaving how to learn from big mixed-quality datasets as open work.
+  </aside>
+</div>

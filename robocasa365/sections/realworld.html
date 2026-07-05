@@ -1,0 +1,69 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-eyebrow pc-fade-in">§4.5 · Simulation data helps real robots</div>
+  <div class="pc-source" data-page="9">pp. 9–10</div>
+
+  <p class="pc-fade-in">A simulation benchmark earns its keep only if the policies it trains do something useful off-screen. The test moves onto real hardware: a <em>DROID</em> Panda arm<pc-cite key="khazatsky2024droid"></pc-cite> with three cameras, set loose in an actual kitchen and driven by <em>GR00T N1.5</em><pc-cite key="nvidia2025groot"></pc-cite>.</p>
+
+  <figure class="pc-figure pc-figure--zoom pc-rise">
+    <img src="figures/web/real_robot_setup_v2.png" alt="A white Panda robot arm mounted on a cart in a real office kitchen, surrounded by a microwave, toaster oven, sink, and cabinets." style="max-width:420px;width:100%">
+    <figcaption>Real-robot platform — a DROID Panda arm with three cameras in a real kitchen.</figcaption>
+  </figure>
+
+  <p class="pc-fade-in">Four kitchen tasks make up the evaluation, ranging from a single flick of the wrist to a two-item tidy-up. Collecting <strong>140 human demonstrations</strong> — 30 apiece for the first three tasks, 50 for the longer-horizon last one — seeds the training data.</p>
+
+  <pc-grid class="pc-rise" data='[
+    {"eyebrow": "Task 1", "title": "CloseElectricKettleLid", "body": "Close the lid of the electric kettle — a short, single-skill motion."},
+    {"eyebrow": "Task 2", "title": "PickPlaceToasterOvenToCounter", "body": "Move the item out of the toaster oven and set it on the counter."},
+    {"eyebrow": "Task 3", "title": "PickPlaceCounterToCabinet", "body": "Pick an object off the counter and place it into the cabinet."},
+    {"eyebrow": "Task 4", "title": "PlaceOnDishRack", "body": "Longer horizon: move two items from the sink onto the dish rack."}
+  ]'></pc-grid>
+
+  <p class="pc-fade-in">The two training recipes differ only in whether simulation is invited in. <strong>Real Only</strong> trains GR00T N1.5 on the 140 real demonstrations; <strong>Sim-and-Real</strong> first mid-trains on the 150 highest-performing simulation tasks, then co-fine-tunes on the real demos plus matching simulation data for these four tasks.</p>
+
+  <p class="pc-fade-in">To make the sim data transfer, the simulation datasets are re-rendered to match the real camera views — following established sim-and-real alignment practice<pc-cite key="maddukuri2025simreal"></pc-cite>. Those three re-rendered views are exactly what the policy sees at inference.</p>
+
+  <figure class="pc-figure pc-rise">
+    <img src="figures/web/cam_images_v1.png" alt="Three side-by-side simulated camera views of a kitchen scene with a robot arm, rendered to match the real setup." style="width:100%">
+    <figcaption>The three camera views (256×256) input to the policy, re-rendered from simulation to match the real setup.</figcaption>
+  </figure>
+
+  <p class="pc-fade-in">After training, each model runs 20 trials per task in the real kitchen. Scored as task success rate, the two recipes separate cleanly.</p>
+
+  <pc-table class="pc-rise" data='{
+    "title": "Real-world success rate — real data only vs. simulation + real",
+    "columns": [
+      {"label": "Setting", "align": "left"},
+      {"label": "CloseElectricKettleLid", "align": "right", "unit": "%"},
+      {"label": "PickPlaceToasterOvenToCounter", "align": "right", "unit": "%"},
+      {"label": "PickPlaceCounterToCabinet", "align": "right", "unit": "%"},
+      {"label": "PlaceOnDishRack", "align": "right", "unit": "%"},
+      {"label": "Avg", "align": "right", "unit": "%"}
+    ],
+    "rows": [
+      {"cells": ["Real Only", 70, 70, 52, 55, 61.8]},
+      {"cells": ["Sim-and-Real (Ours)", 70, 100, 84, 65, 79.8], "highlight": true}
+    ],
+    "highlightBest": true,
+    "caption": "From Table 5. Success rate (%) over 20 trials per task; best per column in bold."
+  }'></pc-table>
+
+  <p class="pc-fade-in">Adding simulation never hurts and usually helps a lot: the biggest jump is <strong>PickPlaceToasterOvenToCounter, which climbs from 70% to a perfect 100%</strong>, with PickPlaceCounterToCabinet close behind (52% → 84%).</p>
+
+  <pc-compare class="l-page pc-rise" data='{
+    "title": "Per-task success rate by training recipe",
+    "categories": ["CloseElectricKettleLid", "PickPlaceToasterOvenToCounter", "PickPlaceCounterToCabinet", "PlaceOnDishRack"],
+    "series": [
+      {"name": "Real Only", "values": [70, 70, 52, 55]},
+      {"name": "Sim-and-Real (Ours)", "values": [70, 100, 84, 65]}
+    ],
+    "yLabel": "Success (%)",
+    "yMax": 100
+  }'></pc-compare>
+
+  <p class="pc-fade-in">Averaged across the four tasks, mixing in simulation lifts success from <strong>61.8% to 79.8% — a +18.1-point gain</strong> over training on real demonstrations alone. The benchmark pays off twice over: once for evaluating policies in sim, and again as free training signal for the real robot.</p>
+
+  <aside class="pc-callout pc-fade-in">
+    <div class="pc-callout-title">Takeaway</div>
+    Pre-training on the simulation tasks and co-fine-tuning with re-rendered sim data raises real-world success from 61.8% to 79.8% — the same synthetic scenes that grade a policy also make it better on hardware.
+  </aside>
+</div>

@@ -1,0 +1,32 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-eyebrow pc-fade-in">§5 · Takeaways and open problems</div>
+  <div class="pc-source" data-page="10">p. 10</div>
+
+  <p class="pc-fade-in">Three questions ran through the whole study — can one policy learn hundreds of tasks, does pretraining data pay off, and can a robot keep learning without forgetting. Each returns a clean, partly uncomfortable answer.</p>
+
+  <pc-stepped class="pc-rise">
+    <script type="application/json">
+    [
+      {"title": "Multi-task at scale", "body": "Generalist policies trained on a large multi-task corpus pick up genuinely broad competence — but <strong>long-horizon tasks remain their weak point</strong>. Breadth is easier to buy than depth over time."},
+      {"title": "Foundation-model learning", "body": "Pretraining data clearly helps downstream tasks, and it is not just about volume: <strong>both the scale of the data and the diversity of tasks it spans carry weight</strong>. A big but narrow corpus leaves value on the table."},
+      {"title": "Lifelong learning", "body": "Learning new tasks while holding onto old ones is still unsolved. There is a <strong>real trade-off between acquiring new skills and retaining prior knowledge</strong> — progress on one tends to cost the other."}
+    ]
+    </script>
+  </pc-stepped>
+
+  <p class="pc-fade-in">These findings rest on a deliberately large but deliberately bounded testbed, and two boundaries are worth naming before reading too much into the results.</p>
+
+  <pc-grid class="pc-rise">
+    <script type="application/json">
+    [
+      {"eyebrow": "Limitation", "title": "Kitchen-only", "body": "Every environment here is a kitchen. Whether the same conclusions hold in other household settings — or broader domains entirely — is an open question the benchmark can't yet answer."},
+      {"eyebrow": "Limitation", "title": "Sim-to-real gap", "body": "For all its scale, simulated data doesn't capture the full sensory and physical complexity of the real world. Bridging simulation and real deployment stays a significant challenge."}
+    ]
+    </script>
+  </pc-grid>
+
+  <aside class="pc-callout pc-fade-in">
+    <div class="pc-callout-title">Where this points</div>
+    Left standing is a reproducible, openly shared arena — thousands of realistic scenes, hundreds of everyday tasks, thousands of hours of interaction — where the next round of generalist-robot ideas can be trained, stress-tested, and compared on equal footing.
+  </aside>
+</div>

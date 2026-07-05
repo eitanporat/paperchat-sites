@@ -1,0 +1,101 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-eyebrow pc-fade-in">§3.3 · the tasks</div>
+  <div class="pc-source" data-page="4">p. 4</div>
+
+  <p class="pc-fade-in">
+    A kitchen agent has to do many small things well and a few long things in order.
+    RoboCasa365 splits that ambition into two kinds of task: <em>atomic</em> tasks, which
+    execute a single skill, and <em>composite</em> tasks, which chain skills into a
+    routine — <strong>365 tasks in all, 65 atomic and 300 composite</strong>.
+  </p>
+
+  <p class="pc-fade-in">
+    The atomic tasks rest on eight foundational skills inherited from RoboCasa<pc-cite key="nasiriany2024robocasa"></pc-cite>.
+    RoboCasa contributed 25 atomic tasks; 40 new ones cover appliances and behaviors the
+    simulator now affords, bringing the atomic set to <strong>65</strong>.
+  </p>
+
+  <pc-grid class="l-page">
+    <script type="application/json">
+    [
+      {"eyebrow": "skill 1", "title": "Pick-and-place", "body": "Lift a pear off the counter and set it in a bowl by the sink."},
+      {"eyebrow": "skill 2", "title": "Open / close doors", "body": "Swing a cabinet or microwave door open, then latch it shut."},
+      {"eyebrow": "skill 3", "title": "Open / close drawers", "body": "Slide a drawer out to reach utensils, then push it closed."},
+      {"eyebrow": "skill 4", "title": "Turn levers", "body": "Lift a faucet lever to start the flow of water."},
+      {"eyebrow": "skill 5", "title": "Turn knobs", "body": "Rotate a stove knob to ignite the burner underneath."},
+      {"eyebrow": "skill 6", "title": "Press buttons", "body": "Press the start button on the toaster or the blender."},
+      {"eyebrow": "skill 7", "title": "Insertion", "body": "Slot a mug into the correct rack of the dishwasher."},
+      {"eyebrow": "skill 8", "title": "Navigation", "body": "Drive the mobile base across the kitchen to reach the sink."}
+    ]
+    </script>
+  </pc-grid>
+
+  <p class="pc-fade-in">
+    Composite tasks are where the kitchen comes alive — brewing coffee, plating a dish,
+    loading the dishwasher — and there are far too many to author by hand. So the 300
+    composite tasks are <strong>authored by a two-stage LLM pipeline</strong>: first solicit
+    activities, then expand each into concrete task blueprints, then write code.
+  </p>
+
+  <pc-chain class="l-page" data='[
+    {"label": "activities", "sub": "prompt LLMs", "detail": "Retrieve ~60 high-level kitchen activities, such as boiling water, toasting bread, brewing coffee, washing dishes, and storing leftovers."},
+    {"label": "blueprints", "sub": "per activity", "detail": "For each activity, prompt for task blueprints: the task name, a high-level description, the objects and fixtures involved, and the sequence of skills needed."},
+    {"label": "task code", "sub": "300 composite", "detail": "Hand-write code from each blueprint. 83 composite tasks are reused from RoboCasa; 217 are new — 300 in total."}
+  ]'></pc-chain>
+
+  <p class="pc-fade-in">
+    Those 300 tasks don't sit in a flat list. They organize into <strong>6 activity families
+    spanning 60 activities</strong>, grouped by shared functional and semantic structure —
+    a beverage task and a cooking task ask for different things even when both start with a
+    pick-and-place.
+  </p>
+
+  <figure class="pc-figure pc-figure--zoom l-page pc-rise">
+    <img src="figures/web/x3.png" alt="Six activity families with representative composite tasks and rollouts.">
+    <figcaption>Composite tasks — 6 activity families spanning 60 activities, with representative task instructions and rollouts.</figcaption>
+  </figure>
+
+  <p class="pc-fade-in">
+    Under each family sit its activities, and under those the individual tasks. Cooking alone
+    branches into baking, boiling, frying, making toast, and sautéing; serving covers setting
+    the table, plating, and garnishing.
+  </p>
+
+  <pc-tree class="l-page">
+    <script type="application/json">
+    {
+      "root": {
+        "label": "Composite tasks",
+        "body": "6 activity families spanning 60 activities.",
+        "children": [
+          {"label": "Beverage Preparation", "body": "Making and serving drinks.",
+           "children": [{"label": "Brewing"}, {"label": "Making Tea"}, {"label": "Making Smoothies"}, {"label": "Preparing Hot Chocolate"}, {"label": "Adding Ice to Beverages"}]},
+          {"label": "Cleaning & Sanitizing", "body": "Keeping surfaces and appliances clean.",
+           "children": [{"label": "Cleaning Appliances"}, {"label": "Loading Dishwasher"}, {"label": "Washing Dishes"}, {"label": "Sanitizing Surface"}]},
+          {"label": "Cooking", "body": "Applying heat to food.",
+           "children": [{"label": "Baking"}, {"label": "Boiling"}, {"label": "Frying"}, {"label": "Making Toast"}, {"label": "Sautéing Vegetables"}]},
+          {"label": "Food Preparation", "body": "Getting ingredients ready to cook.",
+           "children": [{"label": "Chopping Vegetables"}, {"label": "Making Salads"}, {"label": "Defrosting Food"}, {"label": "Washing Fruits & Vegetables"}]},
+          {"label": "Organizing & Storage", "body": "Putting things where they belong.",
+           "children": [{"label": "Loading Fridge"}, {"label": "Storing Leftovers"}, {"label": "Organizing Utensils"}, {"label": "Arranging Cabinets"}]},
+          {"label": "Serving", "body": "Presenting food to the table.",
+           "children": [{"label": "Setting the Table"}, {"label": "Plating Food"}, {"label": "Garnishing Dishes"}, {"label": "Arranging Condiments"}]}
+        ]
+      }
+    }
+    </script>
+  </pc-tree>
+
+  <p class="pc-fade-in">
+    One cut runs across both task types and matters most for hardware: <strong>220 of the 365
+    tasks require mobile manipulation</strong> — the robot must drive between fixtures — while
+    145 can be finished from a single spot.
+  </p>
+
+  <aside class="pc-callout pc-fade-in">
+    <div class="pc-callout-title">Takeaway</div>
+    365 everyday tasks fall out of 8 reusable skills: 65 atomic tasks exercise them one at a
+    time, and 300 LLM-authored composite tasks chain them into the six families of a working
+    kitchen — most demanding that the robot move to get the job done.
+  </aside>
+</div>

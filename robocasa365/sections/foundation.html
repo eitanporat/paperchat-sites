@@ -1,0 +1,105 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-eyebrow pc-fade-in">§4.2 · foundation model training</div>
+  <div class="pc-source" data-page="7">p. 7</div>
+
+  <p class="pc-fade-in">
+    The paradigm that has carried robot learning forward is
+    <em>pretrain-then-finetune</em><pc-cite key="black2024pi0"></pc-cite><pc-cite key="nvidia2025groot"></pc-cite>:
+    soak a policy in a broad mixture, then specialize it on the tasks you
+    actually care about. The question this benchmark can finally answer at
+    scale is how much that pretraining is <strong>worth in demonstrations
+    saved</strong>.
+  </p>
+
+  <p class="pc-fade-in">
+    Pretraining pools human data across 300 tasks (411 h) with MimicGen
+    synthetic data across 60 atomic tasks (1,615 h); the target set is human
+    data across 50 tasks (208 h). Of those 50 targets, 34 also appear in
+    pretraining, while 16
+    <pc-term def="Composite tasks in the target set that never appear in the pretraining data — the strict out-of-distribution generalization test.">Composite-Unseen</pc-term>
+    tasks are held entirely out.
+  </p>
+
+  <pc-grid data='[
+    {"eyebrow": "Regime 1", "title": "Pretraining only", "body": "Zero target demos. Whatever transfers from the broad mixture, and nothing more."},
+    {"eyebrow": "Regime 2", "title": "Target only", "body": "No pretraining. Train from scratch on 50, 150, or 500 demos per task."},
+    {"eyebrow": "Regime 3", "title": "Pretraining + post-training", "body": "Pretrain on the full mixture, then fine-tune on the same 10 / 30 / 100% target budgets."}
+  ]'></pc-grid>
+
+  <p class="pc-fade-in">
+    The model throughout is <em>GR00T N1.5</em><pc-cite key="nvidia2025groot"></pc-cite>,
+    an open foundation policy, evaluated across all 50 target tasks by average
+    success rate. The three budgets — 50, 150, and 500 demos per task —
+    correspond to 10%, 30%, and 100% of the target data.
+  </p>
+
+  <pc-table class="l-page">
+    <script type="application/json">
+    {
+      "title": "Foundation model training results — average task success rate (%)",
+      "columns": [
+        {"label": "Task Type", "align": "left"},
+        {"label": "Pretrain only", "align": "right", "unit": "%"},
+        {"label": "Target 10%", "align": "right", "unit": "%"},
+        {"label": "Target 30%", "align": "right", "unit": "%"},
+        {"label": "Target 100%", "align": "right", "unit": "%"},
+        {"label": "Pre+Tgt 10%", "align": "right", "unit": "%"},
+        {"label": "Pre+Tgt 30%", "align": "right", "unit": "%"},
+        {"label": "Pre+Tgt 100%", "align": "right", "unit": "%"}
+      ],
+      "rows": [
+        {"cells": ["Atomic", 41.9, 38.7, 50.6, 60.6, 56.9, 59.1, 68.5]},
+        {"cells": ["Composite-Seen", 0.0, 11.0, 22.7, 35.0, 25.4, 34.6, 40.6]},
+        {"cells": ["Composite-Unseen", 0.2, 11.2, 27.5, 33.3, 22.7, 30.8, 42.1]},
+        {"cells": ["Average", 15.1, 21.0, 34.3, 43.7, 35.9, 42.2, 51.1], "highlight": true}
+      ],
+      "caption": "Table 2. Pretraining-only vs. target-only vs. pretraining followed by target post-training, at 10 / 30 / 100% of target data (50 / 150 / 500 demos per task)."
+    }
+    </script>
+  </pc-table>
+
+  <p class="pc-fade-in">
+    Pretraining alone clears <strong>41.9% on atomic tasks</strong> but collapses
+    to near zero on both composite splits — broad skills transfer, but the
+    long-horizon compositions that were never demonstrated do not appear from
+    thin air.
+  </p>
+
+  <p class="pc-fade-in">
+    Add target post-training and pretraining wins at <strong>every budget</strong>:
+    35.9 vs. 21.0 at 10%, 42.2 vs. 34.3 at 30%, 51.1 vs. 43.7 at 100%. The gap
+    is widest on Composite-Unseen, where fine-tuning a pretrained model reaches
+    42.1 against 33.3 from scratch.
+  </p>
+
+  <pc-plot class="l-page">
+    <script type="application/json">
+    {
+      "kind": "line",
+      "title": "Average success vs. target demos per task",
+      "xLabel": "target demos per task",
+      "yLabel": "avg task success rate (%)",
+      "series": [
+        {"name": "Pretraining only", "points": [[0, 15.1]]},
+        {"name": "Target only", "points": [[50, 21.0], [150, 34.3], [500, 43.7]]},
+        {"name": "Pretraining + Target post-training", "points": [[50, 35.9], [150, 42.2], [500, 51.1]]}
+      ]
+    }
+    </script>
+  </pc-plot>
+
+  <p class="pc-fade-in">
+    Read the curves horizontally and the payoff is a <strong>~3× gain in data
+    efficiency</strong>: the pretrained-and-finetuned policy matches target-only
+    quality using roughly one-third the target demonstrations. Its 50-demo point
+    (35.9) already sits above target-only's 150-demo point (34.3).
+  </p>
+
+  <aside class="pc-callout">
+    <div class="pc-callout-title">The central result</div>
+    Pretraining buys about a 3× data-efficiency multiplier — it reaches the same
+    downstream success as learning from scratch with roughly one-third the target
+    demonstrations, and the gain is largest exactly where it is hardest to earn:
+    the compositions never seen during pretraining.
+  </aside>
+</div>

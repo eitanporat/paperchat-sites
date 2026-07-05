@@ -1,0 +1,40 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-eyebrow pc-fade-in">§1 · The case for a simulation benchmark</div>
+  <div class="pc-source" data-page="1">pp. 1–2</div>
+
+  <p class="pc-fade-in">Robot learning has edged close to <em>generalist</em> policies — single models that manipulate novel objects across unfamiliar rooms<pc-cite key="black2024pi0"></pc-cite><pc-cite key="pi05_2025"></pc-cite><pc-cite key="nvidia2025groot"></pc-cite>. Two obstacles keep that promise from scaling.</p>
+
+  <pc-grid class="pc-rise" data='[
+    {"eyebrow": "Obstacle 1", "title": "Data stays narrow", "body": "Training generalists demands vast, diverse experience. Real-world datasets have grown in size, yet still cover a thin slice of tasks — limiting how robust a policy can get."},
+    {"eyebrow": "Obstacle 2", "title": "Evaluation is fragile", "body": "Real-world benchmarking is resource-intensive and slow, and shot through with experimental noise — reproducible, systematic comparison across methods is hard."}
+  ]'></pc-grid>
+
+  <p class="pc-fade-in">Simulation answers both at once: it can synthesize an effectively <strong>infinite variety of tasks and scenes</strong>, and it turns evaluation into a controlled, reproducible procedure<pc-cite key="mandlekar2023mimicgen"></pc-cite>. The catch is that existing frameworks spend little of that budget — a handful of tasks, a single tabletop or room, and datasets too small to probe how diversity and scale actually drive generalization.</p>
+
+  <p class="pc-fade-in"><em>RoboCasa365</em>, built on the RoboCasa framework<pc-cite key="nasiriany2024robocasa"></pc-cite>, spends the full budget — a household-robotics benchmark organized around four pillars.</p>
+
+  <pc-stepped class="l-body-outset pc-rise">
+    <script type="application/json">
+    [
+      {"title": "① Comprehensive tasks", "body": "<strong>365 tasks across 60 kitchen activities</strong> — manipulation, semantic reasoning, long-horizon planning, and memory-dependent tasks — so capability can be measured along many axes at once."},
+      {"title": "② Diverse environments", "body": "<strong>2,500 unique kitchen scenes</strong> modeled from real homes across the United States, spanning a wide range of layouts, object configurations, and visual variation."},
+      {"title": "③ Large-scale data", "body": "<strong>2,000+ hours</strong> of robot interaction: 612 hours of human demonstration plus 1,615 hours generated synthetically with the MimicGen tool."},
+      {"title": "④ Systematic benchmarking", "body": "One reproducible suite spanning three regimes — massively multi-task training, foundation-model training, and lifelong learning — designed to isolate which factors most drive generalization."}
+    ]
+    </script>
+  </pc-stepped>
+
+  <p class="pc-fade-in">Synthetic hours come from MimicGen<pc-cite key="mandlekar2023mimicgen"></pc-cite>, which expands a few human demonstrations into many by replaying them across scene variations. Together the four pillars form a single resource for training policies and asking what makes them generalize.</p>
+
+  <figure class="pc-figure l-page pc-rise">
+    <img src="figures/web/x1.png" alt="Overview of RoboCasa365: everyday tasks, kitchen scenes, hours of data, and benchmarks">
+    <figcaption>Overview of RoboCasa365 — 365 everyday tasks, 2,500 kitchen scenes, 2,200+ hours of data, and systematic benchmarks for training and evaluating generalist robots.</figcaption>
+  </figure>
+
+  <p class="pc-fade-in">The scale gap is stark: where the prior RoboCasa release spanned 30 tasks and 100 scenes with 100k demonstrations, RoboCasa365 spans 300+ tasks and 2,500 scenes with over 500k demonstrations — the first simulation framework to combine that breadth of tasks, scenes, data, and benchmarks at once.</p>
+
+  <aside class="pc-callout pc-fade-in">
+    <div class="pc-callout-title">Takeaway</div>
+    Diverse data and reproducible evaluation are the twin bottlenecks for generalist robots — and a simulator big enough to hold 365 tasks, 2,500 real-home kitchens, and 2,000+ hours of experience is how you attack both with one instrument.
+  </aside>
+</div>

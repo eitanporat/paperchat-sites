@@ -1,0 +1,108 @@
+<div class="pc-prose pc-stagger">
+  <div class="pc-eyebrow pc-fade-in">§3.4 · datasets</div>
+  <div class="pc-source" data-page="5">pp. 5–6</div>
+
+  <p class="pc-fade-in">
+    Behind the benchmark sits a robot-data collection that clears
+    <strong>2,000 hours</strong> and half a million trajectories — enough to
+    train policies on everyday household work at a scale most simulated
+    manipulation datasets never reach.
+  </p>
+
+  <p class="pc-fade-in">
+    Every demonstration comes from a <em>Franka Panda Emika</em> arm mounted on
+    an <em>Omron</em> mobile base<pc-cite key="haviland2022"></pc-cite>; the
+    simulation framework can in principle drive other mobile manipulators and
+    humanoid platforms.
+  </p>
+
+  <pc-table class="l-body-outset">
+    <script type="application/json">
+    {
+      "title": "Dataset composition",
+      "columns": [
+        {"label": "Source", "align": "left"},
+        {"label": "Tasks", "align": "right"},
+        {"label": "Demos", "align": "right"},
+        {"label": "Hours", "align": "right"}
+      ],
+      "rows": [
+        {"cells": ["Human pretraining", 300, "30k", "~404"]},
+        {"cells": ["Human target", 50, "25k", "208"]},
+        {"cells": ["MimicGen synthetic", 60, "600k", "1,615"], "highlight": true},
+        {"cells": ["Total", 410, "655k", "~2,227"]}
+      ],
+      "caption": "Pretraining human data covers 65 atomic + 235 composite tasks (100 demos each); target data covers 50 representative tasks (500 demos each); MimicGen generates 10k demos per atomic task from 100 human seeds."
+    }
+    </script>
+  </pc-table>
+
+  <p class="pc-fade-in">
+    The synthetic slice is by far the largest. For each of 60 atomic tasks,
+    <em>MimicGen</em><pc-cite key="mandlekar2023mimicgen"></pc-cite> takes the 100
+    human teleop demonstrations as seeds and stamps out <strong>10k demos — a
+    100× scale-up</strong>, contributing 1,615 hours on its own.
+  </p>
+
+  <p class="pc-fade-in">
+    The human demonstrations still anchor the collection: 30k pretraining demos
+    across 300 tasks, plus 500 demos apiece for the 50 target tasks. Two
+    distributions describe how those episodes are shaped.
+  </p>
+
+  <pc-plot class="l-page">
+    <script type="application/json">
+    {
+      "kind": "bar",
+      "title": "Distribution of required subtasks per task",
+      "xLabel": "number of subtasks",
+      "yLabel": "task count",
+      "series": [
+        {"name": "tasks", "points": [
+          [1, 65], [2, 95], [3, 44], [4, 56], [5, 24], [6, 9],
+          [7, 34], [8, 17], [9, 5], [11, 11], [12, 2], [15, 2], [16, 1]
+        ]}
+      ]
+    }
+    </script>
+  </pc-plot>
+
+  <p class="pc-fade-in">
+    Most of the 365 tasks decompose into just one or two subtasks, but a long
+    tail runs all the way out to <strong>15 and 16 subtasks</strong> — the
+    long-horizon chores that make the benchmark hard.
+  </p>
+
+  <pc-plot class="l-page">
+    <script type="application/json">
+    {
+      "kind": "bar",
+      "title": "Distribution of human demo episode lengths",
+      "xLabel": "episode length (seconds)",
+      "yLabel": "number of demos",
+      "series": [
+        {"name": "demos", "points": [
+          [5, 5000], [15, 11000], [25, 10100], [35, 9800], [45, 8200],
+          [55, 5500], [65, 3500], [75, 2400], [85, 1700], [95, 1150],
+          [105, 750], [115, 520], [125, 350], [135, 300], [145, 180], [155, 300]
+        ]}
+      ]
+    }
+    </script>
+  </pc-plot>
+
+  <p class="pc-fade-in">
+    Across all 55k pretraining and target human episodes, most last between
+    <strong>10 and 60 seconds</strong>, with a tail of longer-horizon runs that
+    stretch past three minutes. (Bucketed counts read off the published
+    histogram — approximate.)
+  </p>
+
+  <aside class="pc-callout">
+    <div class="pc-callout-title">Takeaway</div>
+    The distributions share one shape: a dense mass of short, simple tasks and a
+    thin tail of long, multi-subtask ones. That tail — the 15-subtask chores and
+    the three-minute episodes — is exactly the long-horizon behavior that a
+    household robot has to get right.
+  </aside>
+</div>
